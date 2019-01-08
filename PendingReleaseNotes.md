@@ -6,6 +6,7 @@
 
 ## Notable Features
 
+- Added the dashboard `port` configuration setting.
 
 ## Breaking Changes
 
