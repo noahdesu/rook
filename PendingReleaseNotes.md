@@ -7,6 +7,7 @@
 ## Notable Features
 
 - Added the dashboard `port` configuration setting.
+- Added the dashboard `ssl` configuration setting.
 
 ## Breaking Changes
 
