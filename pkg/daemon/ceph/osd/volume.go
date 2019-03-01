@@ -70,7 +70,7 @@ func (a *OsdAgent) initializeDevices(context *clusterd.Context, devices *DeviceO
 	}
 
 	baseArgs := []string{"lvm", "batch", "--prepare", storeFlag, "--yes"}
-	if a.storeConfig.EncryptedDevice {
+	if a.storeConfig.IsEncryptedDevice() {
 		baseArgs = append(baseArgs, encryptedFlag)
 	}
 

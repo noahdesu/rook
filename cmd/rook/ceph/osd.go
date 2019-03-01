@@ -119,7 +119,10 @@ func addOSDConfigFlags(command *cobra.Command) {
 	command.Flags().IntVar(&cfg.storeConfig.JournalSizeMB, "osd-journal-size", osdcfg.JournalDefaultSizeMB, "default size (MB) for OSD journal (filestore)")
 	command.Flags().StringVar(&cfg.storeConfig.StoreType, "osd-store", "", "type of backing OSD store to use (bluestore or filestore)")
 	command.Flags().IntVar(&cfg.storeConfig.OSDsPerDevice, "osds-per-device", 1, "the number of OSDs per device")
-	command.Flags().BoolVar(&cfg.storeConfig.EncryptedDevice, "encrypted-device", false, "whether to encrypt the OSD with dmcrypt")
+
+	var enc bool
+	command.Flags().BoolVar(&enc, "encrypted-device", false, "whether to encrypt the OSD with dmcrypt")
+	cfg.storeConfig.SetEncryptedDevice(enc)
 }
 
 func init() {

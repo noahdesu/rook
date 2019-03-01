@@ -52,7 +52,18 @@ type StoreConfig struct {
 	DatabaseSizeMB  int    `json:"databaseSizeMB,omitempty"`
 	JournalSizeMB   int    `json:"journalSizeMB,omitempty"`
 	OSDsPerDevice   int    `json:"osdsPerDevice,omitempty"`
-	EncryptedDevice bool   `json:"encryptedDevice,omitempty"`
+	EncryptedDevice *bool  `json:"encryptedDevice,omitempty"`
+}
+
+func (storeConfig *StoreConfig) SetEncryptedDevice(enc bool) {
+	if storeConfig.EncryptedDevice == nil {
+		storeConfig.EncryptedDevice = &enc
+	}
+	*storeConfig.EncryptedDevice = enc
+}
+
+func (storeConfig *StoreConfig) IsEncryptedDevice() bool {
+	return storeConfig.EncryptedDevice != nil && *storeConfig.EncryptedDevice
 }
 
 func ToStoreConfig(config map[string]string) StoreConfig {
@@ -70,7 +81,7 @@ func ToStoreConfig(config map[string]string) StoreConfig {
 		case OSDsPerDeviceKey:
 			storeConfig.OSDsPerDevice = convertToIntIgnoreErr(v)
 		case EncryptedDeviceKey:
-			storeConfig.EncryptedDevice = (v == "true")
+			storeConfig.SetEncryptedDevice(v == "true")
 		}
 	}
 
