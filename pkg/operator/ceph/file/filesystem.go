@@ -26,6 +26,7 @@ import (
 	"github.com/rook/rook/pkg/daemon/ceph/model"
 	"github.com/rook/rook/pkg/operator/ceph/file/mds"
 	"github.com/rook/rook/pkg/operator/ceph/pool"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -74,7 +75,8 @@ func createFilesystem(
 	}
 
 	// As of Nautilus, allow_standby_replay is a fs property so we need to apply it
-	if cephv1.VersionAtLeast(clusterInfo.CephVersionName, cephv1.Nautilus) {
+	//if cephv1.VersionAtLeast(clusterInfo.CephVersionName, cephv1.Nautilus) {
+	if clusterInfo.CephVer.AtLeast(version.Nautilus) {
 		if fs.Spec.MetadataServer.ActiveStandby {
 			if err = client.AllowStandbyReplay(context, fs.Namespace, fs.Name, fs.Spec.MetadataServer.ActiveStandby); err != nil {
 				return fmt.Errorf("failed to set allow_standby_replay to filesystem %s: %v", fs.Name, err)

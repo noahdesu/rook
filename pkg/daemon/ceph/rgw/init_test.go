@@ -52,16 +52,16 @@ func TestPortString(t *testing.T) {
 
 func TestFrontend(t *testing.T) {
 	cfg := &Config{}
-	cfg.ClusterInfo = &cephconfig.ClusterInfo{CephVersionName: "mimic"}
+	cfg.ClusterInfo = &cephconfig.ClusterInfo{} // TODO: set version
 
 	result := rgwFrontend(cfg)
 	assert.Equal(t, "civetweb", result)
 
-	cfg.ClusterInfo.CephVersionName = "nautilus"
+	//cfg.ClusterInfo.CephVersionName = "nautilus" // TODO: set version
 	result = rgwFrontend(cfg)
 	assert.Equal(t, "beast", result)
 
-	cfg.ClusterInfo.CephVersionName = "octopus"
+	//cfg.ClusterInfo.CephVersionName = "octopus" // TODO: set version
 	result = rgwFrontend(cfg)
 	assert.Equal(t, "beast", result)
 }

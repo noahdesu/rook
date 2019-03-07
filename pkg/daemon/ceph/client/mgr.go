@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"strings"
 
-	cephv1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1"
 	"github.com/rook/rook/pkg/clusterd"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 )
 
 // MgrEnableModule enables a mgr module
@@ -35,15 +35,16 @@ func MgrDisableModule(context *clusterd.Context, clusterName, name string) error
 }
 
 // MgrSetAllConfig applies a setting for all mgr daemons
-func MgrSetAllConfig(context *clusterd.Context, clusterName, cephVersionName, key, val string) (bool, error) {
-	return MgrSetConfig(context, clusterName, "", cephVersionName, key, val, false)
+func MgrSetAllConfig(context *clusterd.Context, clusterName string, cephVer *version.CephVersion, key, val string) (bool, error) {
+	return MgrSetConfig(context, clusterName, "", cephVer, key, val, false)
 }
 
 // MgrSetConfig applies a setting for a single mgr daemon
-func MgrSetConfig(context *clusterd.Context, clusterName, mgrName, cephVersionName, key, val string, force bool) (bool, error) {
+func MgrSetConfig(context *clusterd.Context, clusterName, mgrName string, cephVer *version.CephVersion, key, val string, force bool) (bool, error) {
 	var getArgs, setArgs []string
 	mgrID := fmt.Sprintf("mgr.%s", mgrName)
-	if cephVersionName == cephv1.Luminous || cephVersionName == "" {
+	//if cephVersionName == cephv1.Luminous || cephVersionName == "" {
+	if cephVer.IsRelease(version.Luminous) {
 		getArgs = append(getArgs, "config-key", "get", key)
 		if val == "" {
 			setArgs = append(setArgs, "config-key", "del", key)
@@ -57,7 +58,8 @@ func MgrSetConfig(context *clusterd.Context, clusterName, mgrName, cephVersionNa
 		} else {
 			setArgs = append(setArgs, "config", "set", mgrID, key, val)
 		}
-		if force && cephv1.VersionAtLeast(cephVersionName, cephv1.Nautilus) {
+		//if force && cephv1.VersionAtLeast(cephVersionName, cephv1.Nautilus) {
+		if force && cephVer.AtLeast(version.Nautilus) {
 			setArgs = append(setArgs, "--force")
 		}
 	}

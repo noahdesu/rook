@@ -56,7 +56,7 @@ func testDeploymentObject(hostNetwork bool) *apps.Deployment {
 		clusterInfo,
 		&clusterd.Context{Clientset: testop.New(1)},
 		"rook/rook:myversion",
-		cephv1.CephVersionSpec{Image: "ceph/ceph:testversion", Name: "mimic"},
+		cephv1.CephVersionSpec{Image: "ceph/ceph:testversion"},
 		hostNetwork,
 		fs,
 		&client.CephFilesystemDetails{ID: 15},

@@ -36,6 +36,7 @@ import (
 	cephutil "github.com/rook/rook/pkg/daemon/ceph/util"
 	"github.com/rook/rook/pkg/operator/ceph/config"
 	"github.com/rook/rook/pkg/operator/ceph/config/keyring"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -98,6 +99,7 @@ type Cluster struct {
 	mapping              *Mapping
 	resources            v1.ResourceRequirements
 	ownerRef             metav1.OwnerReference
+	cephVer              *version.CephVersion // TODO: must set this
 }
 
 // monConfig for a single monitor
@@ -260,7 +262,8 @@ func (c *Cluster) initClusterInfo() error {
 	var err error
 	// get the cluster info from secret
 	c.clusterInfo, c.maxMonID, c.mapping, err = CreateOrLoadClusterInfo(c.context, c.Namespace, &c.ownerRef)
-	c.clusterInfo.CephVersionName = c.cephVersion.Name
+	//c.clusterInfo.CephVersionName = c.cephVersion.Name
+	c.clusterInfo.CephVer = c.cephVer
 
 	if err != nil {
 		return fmt.Errorf("failed to get cluster info. %+v", err)

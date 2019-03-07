@@ -22,7 +22,6 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	cephv1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1"
@@ -34,6 +33,7 @@ import (
 	"github.com/rook/rook/pkg/operator/ceph/cluster/mon"
 	"github.com/rook/rook/pkg/operator/ceph/cluster/osd"
 	"github.com/rook/rook/pkg/operator/ceph/cluster/rbd"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	batch "k8s.io/api/batch/v1"
 	"k8s.io/api/core/v1"
@@ -45,13 +45,6 @@ const (
 	detectVersionName = "rook-ceph-detect-version"
 )
 
-var (
-	// supportedVersions are production-ready versions that rook supports
-	supportedVersions = []string{cephv1.Luminous, cephv1.Mimic}
-	// allVersions includes all supportedVersions as well as unreleased versions that are being tested with rook
-	allVersions = append(supportedVersions, cephv1.Nautilus)
-)
-
 type cluster struct {
 	Info      *cephconfig.ClusterInfo
 	context   *clusterd.Context
@@ -60,6 +53,7 @@ type cluster struct {
 	mons      *mon.Cluster
 	stopCh    chan struct{}
 	ownerRef  metav1.OwnerReference
+	CephVer   *version.CephVersion
 }
 
 func newCluster(c *cephv1.CephCluster, context *clusterd.Context) *cluster {
@@ -76,7 +70,7 @@ func newCluster(c *cephv1.CephCluster, context *clusterd.Context) *cluster {
 	}
 }
 
-func (c *cluster) detectCephMajorVersion(image string, timeout time.Duration) (string, error) {
+func (c *cluster) detectCephVersion(image string, timeout time.Duration) (*version.CephVersion, error) {
 	// get the major ceph version by running "ceph --version" in the ceph image
 	job := &batch.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -108,28 +102,30 @@ func (c *cluster) detectCephMajorVersion(image string, timeout time.Duration) (s
 
 	// run the job to detect the version
 	if err := k8sutil.RunReplaceableJob(c.context.Clientset, job); err != nil {
-		return "", fmt.Errorf("failed to start version job. %+v", err)
+		return nil, fmt.Errorf("failed to start version job. %+v", err)
 	}
 
 	if err := k8sutil.WaitForJobCompletion(c.context.Clientset, job, timeout); err != nil {
-		return "", fmt.Errorf("failed to complete version job. %+v", err)
+		return nil, fmt.Errorf("failed to complete version job. %+v", err)
 	}
 
 	log, err := k8sutil.GetPodLog(c.context.Clientset, c.Namespace, "job="+detectVersionName)
 	if err != nil {
-		return "", fmt.Errorf("failed to get version job log to detect version. %+v", err)
+		return nil, fmt.Errorf("failed to get version job log to detect version. %+v", err)
 	}
 
-	version, err := extractCephVersion(log)
+	// TODO: to do
+	ver, err := version.ExtractCephVersion(log)
 	if err != nil {
-		return "", fmt.Errorf("failed to extract ceph version. %+v", err)
+		return nil, fmt.Errorf("failed to extract ceph version. %+v", err)
 	}
 
 	// delete the job since we're done with it
 	k8sutil.DeleteBatchJob(c.context.Clientset, c.Namespace, job.Name, false)
 
-	logger.Infof("Detected ceph image version: %s", version)
-	return version, nil
+	logger.Infof("Detected ceph image version: %s", ver)
+	v := version.CephVersion{}
+	return &v, nil
 }
 
 func (c *cluster) createInstance(rookImage string) error {
@@ -333,22 +329,4 @@ func clusterChanged(oldCluster, newCluster cephv1.ClusterSpec, clusterRef *clust
 	}
 
 	return changeFound
-}
-
-func extractCephVersion(version string) (string, error) {
-	for _, v := range allVersions {
-		if strings.Contains(version, v) {
-			return v, nil
-		}
-	}
-	return "", fmt.Errorf("failed to parse version from: %s", version)
-}
-
-func versionSupported(version string) bool {
-	for _, v := range supportedVersions {
-		if v == version {
-			return true
-		}
-	}
-	return false
 }

@@ -24,9 +24,9 @@ import (
 	"strconv"
 
 	"github.com/coreos/pkg/capnslog"
-	cephv1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1"
 	"github.com/rook/rook/pkg/clusterd"
 	cephconfig "github.com/rook/rook/pkg/daemon/ceph/config"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	"github.com/rook/rook/pkg/util"
 )
 
@@ -50,7 +50,7 @@ type Config struct {
 	SecurePort      int
 	Keyring         string
 	CertificatePath string
-	ClusterInfo     *cephconfig.ClusterInfo
+	ClusterInfo     *cephconfig.ClusterInfo // TODO: make sure its CephVer is populated
 }
 
 func Initialize(context *clusterd.Context, config *Config) error {
@@ -83,7 +83,8 @@ func portString(config *Config) string {
 }
 
 func rgwFrontend(config *Config) string {
-	if cephv1.VersionAtLeast(config.ClusterInfo.CephVersionName, cephv1.Nautilus) {
+	//if cephv1.VersionAtLeast(config.ClusterInfo.CephVersionName, cephv1.Nautilus) {
+	if config.ClusterInfo.CephVer.AtLeast(version.Nautilus) {
 		rgwFrontendName = "beast"
 	}
 	return rgwFrontendName

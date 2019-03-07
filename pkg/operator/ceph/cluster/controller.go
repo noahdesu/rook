@@ -181,18 +181,21 @@ func (c *ClusterController) onAdd(obj interface{}) {
 		logger.Warningf("mon count is even (given: %d), should be uneven, continuing", cluster.Spec.Mon.Count)
 	}
 
-	cluster.Spec.CephVersion.Name, err = cluster.detectCephMajorVersion(cluster.Spec.CephVersion.Image, 15*time.Minute)
+	cluster.CephVer, err = cluster.detectCephVersion(cluster.Spec.CephVersion.Image, 15*time.Minute)
 	if err != nil {
 		logger.Errorf("unknown ceph major version. %+v", err)
 		return
 	}
 
 	if !cluster.Spec.CephVersion.AllowUnsupported {
-		if !versionSupported(cluster.Spec.CephVersion.Name) {
-			logger.Errorf("unsupported ceph version detected: %s. allowUnsupported must be set to true to run with this version.", cluster.Spec.CephVersion.Name)
+		//if !versionSupported(cluster.Spec.CephVersion.Name) {
+		if !cluster.CephVer.Supported() {
+			logger.Errorf("unsupported ceph version detected: %s. allowUnsupported must be set to true to run with this version.", cluster.CephVer)
 			return
 		}
 	}
+
+	// make sure createInstance occurs after verion detection
 
 	// Start the Rook cluster components. Retry several times in case of failure.
 	err = wait.Poll(clusterCreateInterval, clusterCreateTimeout, func() (bool, error) {
@@ -325,15 +328,19 @@ func (c *ClusterController) onUpdate(oldObj, newObj interface{}) {
 	// if the image changed, we need to detect the new image version
 	if oldClust.Spec.CephVersion.Image != newClust.Spec.CephVersion.Image {
 		logger.Infof("the ceph version changed. detecting the new image version...")
-		version, err := cluster.detectCephMajorVersion(newClust.Spec.CephVersion.Image, 15*time.Minute)
+		version, err := cluster.detectCephVersion(newClust.Spec.CephVersion.Image, 15*time.Minute)
 		if err != nil {
 			logger.Errorf("unknown ceph major version. %+v", err)
 			return
 		}
-		newClust.Spec.CephVersion.Name = version
+		cluster.CephVer = version
 	} else {
-		logger.Infof("ceph version is still %s on image %s", cluster.Spec.CephVersion.Name, cluster.Spec.CephVersion.Image)
-		newClust.Spec.CephVersion.Name = cluster.Spec.CephVersion.Name
+		//logger.Infof("ceph version is still %s on image %s", cluster.Spec.CephVersion.Name, cluster.Spec.CephVersion.Image)
+		//newClust.Spec.CephVersion.Name = cluster.Spec.CephVersion.Name
+		//cluster.CephVer = version
+		// TODO: we need to work on this... probably by always querying
+		// the new version or getting the new version from the old
+		// cluster obj
 	}
 
 	logger.Debugf("old cluster: %+v", oldClust.Spec)

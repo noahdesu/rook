@@ -19,9 +19,9 @@ package mgr
 import (
 	"fmt"
 
-	cephv1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1"
 	"github.com/rook/rook/pkg/operator/ceph/config"
 	"github.com/rook/rook/pkg/operator/ceph/config/keyring"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -47,7 +47,7 @@ type mgrConfig struct {
 func (c *Cluster) dashboardPort() int {
 	if c.dashboard.Port == 0 {
 		// select default ports
-		if c.cephVersion.Name == cephv1.Luminous {
+		if c.cephVer.IsRelease(version.Luminous) {
 			return dashboardPortHTTP
 		}
 		return dashboardPortHTTPS

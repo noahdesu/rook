@@ -19,10 +19,10 @@ package mon
 import (
 	"os"
 
-	cephv1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1"
 	"github.com/rook/rook/pkg/operator/ceph/config"
 
 	opspec "github.com/rook/rook/pkg/operator/ceph/spec"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -182,7 +182,8 @@ func (c *Cluster) makeMonDaemonContainer(monConfig *monConfig) v1.Container {
 	}
 
 	// If deploying Nautilus and newer we need a new port of the monitor container
-	if cephv1.VersionAtLeast(c.cephVersion.Name, cephv1.Nautilus) {
+	//if cephv1.VersionAtLeast(c.cephVersion.Name, cephv1.Nautilus) {
+	if c.cephVer.AtLeast(version.Nautilus) {
 		addContainerPort(container, "msgr2", 3300)
 	}
 

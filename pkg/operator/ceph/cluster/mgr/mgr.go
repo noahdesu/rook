@@ -27,6 +27,7 @@ import (
 	"github.com/rook/rook/pkg/daemon/ceph/client"
 	cephconfig "github.com/rook/rook/pkg/daemon/ceph/config"
 	"github.com/rook/rook/pkg/operator/ceph/config"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -55,6 +56,7 @@ type Cluster struct {
 	ownerRef    metav1.OwnerReference
 	dashboard   cephv1.DashboardSpec
 	cephVersion cephv1.CephVersionSpec
+	cephVer     *version.CephVersion // TODO: must be filled in in cluster/cluster.go
 	rookVersion string
 	exitCode    func(err error) (int, bool)
 }
