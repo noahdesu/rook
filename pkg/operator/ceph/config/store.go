@@ -169,7 +169,6 @@ func (s *Store) createOrUpdateMonHostSecrets(clusterInfo *cephconfig.ClusterInfo
 		msgr2Endpoint := net.JoinHostPort(monIP, monPorts[0])
 		msgr1Endpoint := net.JoinHostPort(monIP, monPorts[1])
 
-		//if cephv1.VersionAtLeast(clusterInfo.CephVersionName, cephv1.Nautilus) {
 		if clusterInfo.CephVer.AtLeast(version.Nautilus) {
 			hosts[i] = "[v2:" + msgr2Endpoint + ",v1:" + msgr1Endpoint + "]"
 		} else {

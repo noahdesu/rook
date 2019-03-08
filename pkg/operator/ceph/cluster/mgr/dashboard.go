@@ -150,7 +150,6 @@ func (c *Cluster) configureDashboardModule(dashboardPort int) error {
 }
 
 func (c *Cluster) initializeSecureDashboard() error {
-	//if c.cephVersion.Name == cephv1.Luminous || c.cephVersion.Name == "" {
 	if c.cephVer.IsRelease(version.Luminous) {
 		logger.Infof("skipping cert and user configuration on luminous")
 		return nil

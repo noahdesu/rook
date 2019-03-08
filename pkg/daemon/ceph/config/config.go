@@ -202,7 +202,6 @@ func CreateDefaultCephConfig(context *clusterd.Context, cluster *ClusterInfo, ru
 		msgr2Endpoint := net.JoinHostPort(monIP, monPorts[0])
 		msgr1Endpoint := net.JoinHostPort(monIP, monPorts[1])
 
-		//if cephv1.VersionAtLeast(cluster.CephVersionName, cephv1.Nautilus) {
 		if cluster.CephVer.AtLeast(version.Nautilus) {
 			monHosts[i] = "[v2:" + msgr2Endpoint + ",v1:" + msgr1Endpoint + "]"
 		} else {

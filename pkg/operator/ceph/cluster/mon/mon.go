@@ -262,7 +262,6 @@ func (c *Cluster) initClusterInfo() error {
 	var err error
 	// get the cluster info from secret
 	c.clusterInfo, c.maxMonID, c.mapping, err = CreateOrLoadClusterInfo(c.context, c.Namespace, &c.ownerRef)
-	//c.clusterInfo.CephVersionName = c.cephVersion.Name
 	c.clusterInfo.CephVer = c.cephVer
 
 	if err != nil {

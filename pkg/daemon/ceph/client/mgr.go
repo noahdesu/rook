@@ -43,7 +43,6 @@ func MgrSetAllConfig(context *clusterd.Context, clusterName string, cephVer *ver
 func MgrSetConfig(context *clusterd.Context, clusterName, mgrName string, cephVer *version.CephVersion, key, val string, force bool) (bool, error) {
 	var getArgs, setArgs []string
 	mgrID := fmt.Sprintf("mgr.%s", mgrName)
-	//if cephVersionName == cephv1.Luminous || cephVersionName == "" {
 	if cephVer.IsRelease(version.Luminous) {
 		getArgs = append(getArgs, "config-key", "get", key)
 		if val == "" {
@@ -58,7 +57,6 @@ func MgrSetConfig(context *clusterd.Context, clusterName, mgrName string, cephVe
 		} else {
 			setArgs = append(setArgs, "config", "set", mgrID, key, val)
 		}
-		//if force && cephv1.VersionAtLeast(cephVersionName, cephv1.Nautilus) {
 		if force && cephVer.AtLeast(version.Nautilus) {
 			setArgs = append(setArgs, "--force")
 		}

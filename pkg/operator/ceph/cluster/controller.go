@@ -188,14 +188,11 @@ func (c *ClusterController) onAdd(obj interface{}) {
 	}
 
 	if !cluster.Spec.CephVersion.AllowUnsupported {
-		//if !versionSupported(cluster.Spec.CephVersion.Name) {
 		if !cluster.CephVer.Supported() {
 			logger.Errorf("unsupported ceph version detected: %s. allowUnsupported must be set to true to run with this version.", cluster.CephVer)
 			return
 		}
 	}
-
-	// make sure createInstance occurs after verion detection
 
 	// Start the Rook cluster components. Retry several times in case of failure.
 	err = wait.Poll(clusterCreateInterval, clusterCreateTimeout, func() (bool, error) {

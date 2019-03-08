@@ -83,7 +83,6 @@ func portString(config *Config) string {
 }
 
 func rgwFrontend(config *Config) string {
-	//if cephv1.VersionAtLeast(config.ClusterInfo.CephVersionName, cephv1.Nautilus) {
 	if config.ClusterInfo.CephVer.AtLeast(version.Nautilus) {
 		rgwFrontendName = "beast"
 	}

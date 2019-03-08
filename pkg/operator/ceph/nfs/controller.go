@@ -81,7 +81,6 @@ func (c *CephNFSController) StartWatch(namespace string, stopCh chan struct{}) e
 
 func (c *CephNFSController) onAdd(obj interface{}) {
 	nfs := obj.(*cephv1.CephNFS).DeepCopy()
-	//if !cephv1.VersionAtLeast(c.cephVersion.Name, cephv1.Nautilus) {
 	if !c.cephVer.AtLeast(version.Nautilus) {
 		logger.Errorf("Ceph NFS is only supported with Nautilus or newer. CRD %s will be ignored.", nfs.Name)
 		return
@@ -96,7 +95,6 @@ func (c *CephNFSController) onAdd(obj interface{}) {
 func (c *CephNFSController) onUpdate(oldObj, newObj interface{}) {
 	oldNFS := oldObj.(*cephv1.CephNFS).DeepCopy()
 	newNFS := newObj.(*cephv1.CephNFS).DeepCopy()
-	//if !cephv1.VersionAtLeast(c.cephVersion.Name, cephv1.Nautilus) {
 	if !c.cephVer.AtLeast(version.Nautilus) {
 		logger.Errorf("Ceph NFS is only supported with Nautilus or newer. CRD %s will be ignored.", newNFS.Name)
 		return
@@ -124,7 +122,6 @@ func (c *CephNFSController) onUpdate(oldObj, newObj interface{}) {
 
 func (c *CephNFSController) onDelete(obj interface{}) {
 	nfs := obj.(*cephv1.CephNFS).DeepCopy()
-	//if !cephv1.VersionAtLeast(c.cephVersion.Name, cephv1.Nautilus) {
 	if !c.cephVer.AtLeast(version.Nautilus) {
 		logger.Errorf("Ceph NFS is only supported with Nautilus or newer. CRD %s cleanup will be ignored.", nfs.Name)
 		return

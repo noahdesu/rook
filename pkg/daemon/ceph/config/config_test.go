@@ -40,7 +40,7 @@ func TestCreateDefaultCephConfig(t *testing.T) {
 			"node0": {Name: "mon0", Endpoint: "10.0.0.1:6789"},
 			"node1": {Name: "mon1", Endpoint: "10.0.0.2:6789"},
 		},
-		//CephVersionName: "mimic",
+		CephVer: &version.Mimic,
 	}
 
 	// start with INFO level logging
@@ -100,7 +100,7 @@ debug bluestore = 1234`
 		Monitors: map[string]*MonInfo{
 			"node0": {Name: "mon0", Endpoint: "10.0.0.1:6789"},
 		},
-		//CephVersionName: "mimic",
+		CephVer: &version.Mimic,
 	}
 
 	// generate the config file to disk now
@@ -136,8 +136,6 @@ func verifyConfig(t *testing.T, cephConfig *CephConfig, cluster *ClusterInfo, lo
 	// Testing mon_host
 	expectedMons := "10.0.0.1:6789,10.0.0.2:6789"
 
-	// TODO: need to set version in the cluster struct above
-	//if cephv1.VersionAtLeast(cluster.CephVersionName, cephv1.Nautilus) {
 	if cluster.CephVer.AtLeast(version.Nautilus) {
 		expectedMons = "[v2:10.0.0.1:3300,v1:10.0.0.1:6789],[v2:10.0.0.2:3300,v1:10.0.0.2:6789]"
 	}

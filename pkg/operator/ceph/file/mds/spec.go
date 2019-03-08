@@ -85,7 +85,6 @@ func (c *Cluster) makeMdsDaemonContainer(mdsConfig *mdsConfig) v1.Container {
 	)
 
 	// These flags are obsoleted as of Nautilus
-	//if !cephv1.VersionAtLeast(c.cephVersion.Name, cephv1.Nautilus) {
 	if !c.cephVer.AtLeast(version.Nautilus) {
 		args = append(
 			args,

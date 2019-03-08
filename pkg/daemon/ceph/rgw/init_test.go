@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	cephconfig "github.com/rook/rook/pkg/daemon/ceph/config"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -52,12 +53,14 @@ func TestPortString(t *testing.T) {
 
 func TestFrontend(t *testing.T) {
 	cfg := &Config{}
-	cfg.ClusterInfo = &cephconfig.ClusterInfo{} // TODO: set version
+	cfg.ClusterInfo = &cephconfig.ClusterInfo{
+		CephVer: &version.Mimic,
+	}
 
 	result := rgwFrontend(cfg)
 	assert.Equal(t, "civetweb", result)
 
-	//cfg.ClusterInfo.CephVersionName = "nautilus" // TODO: set version
+	cfg.ClusterInfo.CephVer = &version.Nautilus
 	result = rgwFrontend(cfg)
 	assert.Equal(t, "beast", result)
 

@@ -75,7 +75,6 @@ func createFilesystem(
 	}
 
 	// As of Nautilus, allow_standby_replay is a fs property so we need to apply it
-	//if cephv1.VersionAtLeast(clusterInfo.CephVersionName, cephv1.Nautilus) {
 	if clusterInfo.CephVer.AtLeast(version.Nautilus) {
 		if fs.Spec.MetadataServer.ActiveStandby {
 			if err = client.AllowStandbyReplay(context, fs.Namespace, fs.Name, fs.Spec.MetadataServer.ActiveStandby); err != nil {

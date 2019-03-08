@@ -114,8 +114,7 @@ func (c *cluster) detectCephVersion(image string, timeout time.Duration) (*versi
 		return nil, fmt.Errorf("failed to get version job log to detect version. %+v", err)
 	}
 
-	// TODO: to do
-	ver, err := version.ExtractCephVersion(log)
+	v, err := version.ExtractCephVersion(log)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract ceph version. %+v", err)
 	}
@@ -123,9 +122,8 @@ func (c *cluster) detectCephVersion(image string, timeout time.Duration) (*versi
 	// delete the job since we're done with it
 	k8sutil.DeleteBatchJob(c.context.Clientset, c.Namespace, job.Name, false)
 
-	logger.Infof("Detected ceph image version: %s", ver)
-	v := version.CephVersion{}
-	return &v, nil
+	logger.Infof("Detected ceph image version: %s", v)
+	return v, nil
 }
 
 func (c *cluster) createInstance(rookImage string) error {
