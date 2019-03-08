@@ -26,6 +26,7 @@ import (
 	rookalpha "github.com/rook/rook/pkg/apis/rook.io/v1alpha2"
 	"github.com/rook/rook/pkg/clusterd"
 	cephconfig "github.com/rook/rook/pkg/daemon/ceph/config"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	testopk8s "github.com/rook/rook/pkg/operator/k8sutil/test"
 	testop "github.com/rook/rook/pkg/operator/test"
 	exectest "github.com/rook/rook/pkg/util/exec/test"
@@ -59,6 +60,7 @@ func TestStartMGR(t *testing.T) {
 		"ns",
 		"myversion",
 		cephv1.CephVersionSpec{},
+		&version.Mimic,
 		rookalpha.Placement{},
 		false,
 		cephv1.DashboardSpec{Enabled: true},

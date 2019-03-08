@@ -170,7 +170,7 @@ func (c *cluster) createInstance(rookImage string) error {
 	}
 
 	mgrs := mgr.New(c.Info, c.context, c.Namespace, rookImage,
-		c.Spec.CephVersion, cephv1.GetMgrPlacement(c.Spec.Placement), c.Spec.Network.HostNetwork,
+		c.Spec.CephVersion, c.CephVer, cephv1.GetMgrPlacement(c.Spec.Placement), c.Spec.Network.HostNetwork,
 		c.Spec.Dashboard, cephv1.GetMgrResources(c.Spec.Resources), c.ownerRef)
 	err = mgrs.Start()
 	if err != nil {

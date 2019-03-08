@@ -27,6 +27,7 @@ import (
 	rookalpha "github.com/rook/rook/pkg/apis/rook.io/v1alpha2"
 	"github.com/rook/rook/pkg/clusterd"
 	cephtest "github.com/rook/rook/pkg/operator/ceph/test"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	optest "github.com/rook/rook/pkg/operator/test"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -41,6 +42,7 @@ func TestPodSpec(t *testing.T) {
 		"ns",
 		"rook/rook:myversion",
 		cephv1.CephVersionSpec{Image: "ceph/ceph:myceph"},
+		&version.Luminous,
 		rookalpha.Placement{},
 		false,
 		cephv1.DashboardSpec{},
@@ -82,6 +84,7 @@ func TestServiceSpec(t *testing.T) {
 		"ns",
 		"myversion",
 		cephv1.CephVersionSpec{},
+		&version.Luminous,
 		rookalpha.Placement{},
 		false,
 		cephv1.DashboardSpec{},
@@ -103,6 +106,7 @@ func TestHostNetwork(t *testing.T) {
 		"ns",
 		"myversion",
 		cephv1.CephVersionSpec{},
+		&version.Luminous,
 		rookalpha.Placement{},
 		true,
 		cephv1.DashboardSpec{},
