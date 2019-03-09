@@ -36,6 +36,7 @@ import (
 	"github.com/rook/rook/pkg/daemon/ceph/client"
 	clienttest "github.com/rook/rook/pkg/daemon/ceph/client/test"
 	cephtest "github.com/rook/rook/pkg/daemon/ceph/test"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	"github.com/rook/rook/pkg/operator/test"
 	exectest "github.com/rook/rook/pkg/util/exec/test"
 	"github.com/stretchr/testify/assert"
@@ -120,6 +121,7 @@ func newCluster(context *clusterd.Context, namespace string, hostNetwork bool, a
 		},
 		resources: resources,
 		ownerRef:  metav1.OwnerReference{},
+		cephVer:   &version.Luminous,
 	}
 }
 

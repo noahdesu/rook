@@ -27,6 +27,7 @@ import (
 	cephconfig "github.com/rook/rook/pkg/daemon/ceph/config"
 
 	cephtest "github.com/rook/rook/pkg/operator/ceph/test"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	testop "github.com/rook/rook/pkg/operator/test"
 	"github.com/stretchr/testify/assert"
 	apps "k8s.io/api/apps/v1"
@@ -50,7 +51,7 @@ func testDeploymentObject(hostNetwork bool) *apps.Deployment {
 						v1.ResourceMemory: *resource.NewQuantity(1337.0, resource.BinarySI),
 					},
 				}}}}
-	clusterInfo := &cephconfig.ClusterInfo{FSID: "myfsid"}
+	clusterInfo := &cephconfig.ClusterInfo{FSID: "myfsid", CephVer: &version.Mimic}
 
 	c := NewCluster(
 		clusterInfo,

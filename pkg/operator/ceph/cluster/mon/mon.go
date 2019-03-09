@@ -99,7 +99,7 @@ type Cluster struct {
 	mapping              *Mapping
 	resources            v1.ResourceRequirements
 	ownerRef             metav1.OwnerReference
-	cephVer              *version.CephVersion // TODO: must set this
+	cephVer              *version.CephVersion
 }
 
 // monConfig for a single monitor
@@ -164,6 +164,7 @@ func New(
 		},
 		resources: resources,
 		ownerRef:  ownerRef,
+		cephVer:   clusterInfo.CephVer, // # TODO: in the non-test path, clusterInfo is nil?
 	}
 }
 

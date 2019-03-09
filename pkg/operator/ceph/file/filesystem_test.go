@@ -29,6 +29,7 @@ import (
 	cephconfig "github.com/rook/rook/pkg/daemon/ceph/config"
 	cephtest "github.com/rook/rook/pkg/daemon/ceph/test"
 	"github.com/rook/rook/pkg/operator/ceph/file/mds"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	testopk8s "github.com/rook/rook/pkg/operator/k8sutil/test"
 	testop "github.com/rook/rook/pkg/operator/test"
 	exectest "github.com/rook/rook/pkg/util/exec/test"
@@ -111,7 +112,7 @@ func TestCreateFilesystem(t *testing.T) {
 			},
 		},
 	}
-	clusterInfo := &cephconfig.ClusterInfo{FSID: "myfsid"}
+	clusterInfo := &cephconfig.ClusterInfo{FSID: "myfsid", CephVer: &version.Luminous}
 
 	// start a basic cluster
 	err := createFilesystem(clusterInfo, context, fs, "v0.1", cephv1.CephVersionSpec{}, false, []metav1.OwnerReference{})
@@ -176,7 +177,7 @@ func TestCreateNopoolFilesystem(t *testing.T) {
 			},
 		},
 	}
-	clusterInfo := &cephconfig.ClusterInfo{FSID: "myfsid"}
+	clusterInfo := &cephconfig.ClusterInfo{FSID: "myfsid", CephVer: &version.Mimic}
 
 	// start a basic cluster
 	err := createFilesystem(clusterInfo, context, fs, "v0.1", cephv1.CephVersionSpec{}, false, []metav1.OwnerReference{})

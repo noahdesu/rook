@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	cephconfig "github.com/rook/rook/pkg/daemon/ceph/config"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 )
 
 // CreateConfigDir creates a test cluster
@@ -32,6 +33,7 @@ func CreateConfigDir(monCount int) *cephconfig.ClusterInfo {
 		MonitorSecret: "monsecret",
 		AdminSecret:   "adminsecret",
 		Monitors:      map[string]*cephconfig.MonInfo{},
+		CephVer:       &version.Luminous,
 	}
 	mons := []string{"a", "b", "c", "d", "e"}
 	for i := 0; i < monCount; i++ {

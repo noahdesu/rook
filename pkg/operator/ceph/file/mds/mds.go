@@ -85,6 +85,7 @@ func NewCluster(
 		fs:          fs,
 		fsID:        strconv.Itoa(fsdetails.ID),
 		ownerRefs:   ownerRefs,
+		cephVer:     clusterInfo.CephVer,
 	}
 }
 
