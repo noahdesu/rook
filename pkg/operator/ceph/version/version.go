@@ -26,7 +26,6 @@ const (
 )
 
 var (
-	// TODO: consider making these pointers
 	Luminous = CephVersion{12, 0, 0}
 	Mimic    = CephVersion{13, 0, 0}
 	Nautilus = CephVersion{14, 0, 0}
