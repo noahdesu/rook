@@ -85,7 +85,7 @@ func (c *Cluster) makeMdsDaemonContainer(mdsConfig *mdsConfig) v1.Container {
 	)
 
 	// These flags are obsoleted as of Nautilus
-	if !cephv1.VersionAtLeast(c.cephVersion.Name, cephv1.Nautilus) {
+	if !cephv1.VersionAtLeast(c.cephVersion.Image.Name, cephv1.Nautilus) {
 		args = append(
 			args,
 			config.NewFlag("mds-standby-for-fscid", c.fsID),
@@ -98,10 +98,10 @@ func (c *Cluster) makeMdsDaemonContainer(mdsConfig *mdsConfig) v1.Container {
 			"ceph-mds",
 		},
 		Args:         args,
-		Image:        c.cephVersion.Image,
+		Image:        c.cephVersion.Image.Image,
 		VolumeMounts: opspec.DaemonVolumeMounts(mdsConfig.DataPathMap, mdsConfig.ResourceName),
 		Env: append(
-			opspec.DaemonEnvVars(c.cephVersion.Image),
+			opspec.DaemonEnvVars(c.cephVersion.Image.Image),
 		),
 		Resources: c.fs.Spec.MetadataServer.Resources,
 	}

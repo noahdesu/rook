@@ -24,6 +24,7 @@ import (
 	rookalpha "github.com/rook/rook/pkg/apis/rook.io/v1alpha2"
 	"github.com/rook/rook/pkg/clusterd"
 	"github.com/rook/rook/pkg/operator/ceph/cluster/osd/config"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	exectest "github.com/rook/rook/pkg/util/exec/test"
 	"github.com/stretchr/testify/assert"
@@ -36,7 +37,8 @@ import (
 )
 
 func TestPodContainer(t *testing.T) {
-	cluster := &Cluster{Namespace: "myosd", rookVersion: "23", cephVersion: cephv1.CephVersionSpec{Name: "mimic"}}
+	verImage := version.VersionedImage{Image: cephv1.CephVersionSpec{Name: "mimic"}}
+	cluster := &Cluster{Namespace: "myosd", rookVersion: "23", cephVersion: verImage}
 	c, err := cluster.provisionPodTemplateSpec([]rookalpha.Device{}, rookalpha.Selection{}, v1.ResourceRequirements{}, config.StoreConfig{}, "", "node", "", v1.RestartPolicyAlways)
 	assert.NotNil(t, c)
 	assert.Nil(t, err)
@@ -72,7 +74,7 @@ func testPodDevices(t *testing.T, dataDir, deviceName string, allDevices bool) {
 	}
 
 	clientset := fake.NewSimpleClientset()
-	cephVersion := cephv1.CephVersionSpec{Image: "ceph/ceph:v12.2.8"}
+	cephVersion := version.VersionedImage{Image: cephv1.CephVersionSpec{Image: "ceph/ceph:v12.2.8"}}
 	c := New(&clusterd.Context{Clientset: clientset, ConfigDir: "/var/lib/rook", Executor: &exectest.MockExecutor{}}, "ns", "rook/rook:myversion", cephVersion,
 		storageSpec, dataDir, rookalpha.Placement{}, false, v1.ResourceRequirements{}, metav1.OwnerReference{})
 
@@ -121,7 +123,7 @@ func testPodDevices(t *testing.T, dataDir, deviceName string, allDevices bool) {
 
 	assert.Equal(t, 1, len(deployment.Spec.Template.Spec.Containers))
 	cont := deployment.Spec.Template.Spec.Containers[0]
-	assert.Equal(t, cephVersion.Image, cont.Image)
+	assert.Equal(t, cephVersion.Image.Image, cont.Image)
 	assert.Equal(t, 4, len(cont.VolumeMounts))
 	assert.Equal(t, "ceph-osd", cont.Command[0])
 }
@@ -156,7 +158,7 @@ func TestStorageSpecDevicesAndDirectories(t *testing.T) {
 	}
 
 	clientset := fake.NewSimpleClientset()
-	c := New(&clusterd.Context{Clientset: clientset, ConfigDir: "/var/lib/rook", Executor: &exectest.MockExecutor{}}, "ns", "rook/rook:myversion", cephv1.CephVersionSpec{},
+	c := New(&clusterd.Context{Clientset: clientset, ConfigDir: "/var/lib/rook", Executor: &exectest.MockExecutor{}}, "ns", "rook/rook:myversion", version.VersionedImage{},
 		storageSpec, "/var/lib/rook", rookalpha.Placement{}, false, v1.ResourceRequirements{}, metav1.OwnerReference{})
 
 	n := c.Storage.ResolveNode(storageSpec.Nodes[0].Name)
@@ -204,7 +206,7 @@ func TestStorageSpecDevicesAndDirectories(t *testing.T) {
 	assert.Equal(t, "/var/lib/rook", cont.VolumeMounts[0].MountPath)
 	assert.Equal(t, "/etc/ceph", cont.VolumeMounts[1].MountPath)
 
-	assert.Equal(t, (7 + len(k8sutil.ClusterDaemonEnvVars(c.cephVersion.Image))), len(cont.Env))
+	assert.Equal(t, (7 + len(k8sutil.ClusterDaemonEnvVars(c.cephVersion.Image.Image))), len(cont.Env))
 
 	require.Equal(t, 2, len(podSpec.InitContainers))
 	initCont = podSpec.InitContainers[0]
@@ -243,7 +245,7 @@ func TestStorageSpecConfig(t *testing.T) {
 	}
 
 	clientset := fake.NewSimpleClientset()
-	c := New(&clusterd.Context{Clientset: clientset, ConfigDir: "/var/lib/rook", Executor: &exectest.MockExecutor{}}, "ns", "rook/rook:myversion", cephv1.CephVersionSpec{},
+	c := New(&clusterd.Context{Clientset: clientset, ConfigDir: "/var/lib/rook", Executor: &exectest.MockExecutor{}}, "ns", "rook/rook:myversion", version.VersionedImage{},
 		storageSpec, "", rookalpha.Placement{}, false, v1.ResourceRequirements{}, metav1.OwnerReference{})
 
 	n := c.Storage.ResolveNode(storageSpec.Nodes[0].Name)
@@ -293,7 +295,7 @@ func TestHostNetwork(t *testing.T) {
 	}
 
 	clientset := fake.NewSimpleClientset()
-	c := New(&clusterd.Context{Clientset: clientset, ConfigDir: "/var/lib/rook", Executor: &exectest.MockExecutor{}}, "ns", "myversion", cephv1.CephVersionSpec{},
+	c := New(&clusterd.Context{Clientset: clientset, ConfigDir: "/var/lib/rook", Executor: &exectest.MockExecutor{}}, "ns", "myversion", version.VersionedImage{},
 		storageSpec, "", rookalpha.Placement{}, true, v1.ResourceRequirements{}, metav1.OwnerReference{})
 
 	n := c.Storage.ResolveNode(storageSpec.Nodes[0].Name)

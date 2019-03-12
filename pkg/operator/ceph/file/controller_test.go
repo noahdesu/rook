@@ -26,6 +26,7 @@ import (
 	rookfake "github.com/rook/rook/pkg/client/clientset/versioned/fake"
 	"github.com/rook/rook/pkg/clusterd"
 	cephconfig "github.com/rook/rook/pkg/daemon/ceph/config"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 
 	testop "github.com/rook/rook/pkg/operator/test"
 	"github.com/stretchr/testify/assert"
@@ -87,7 +88,7 @@ func TestMigrateFilesystemObject(t *testing.T) {
 	}
 	clusterInfo := &cephconfig.ClusterInfo{FSID: "myfsid"}
 
-	controller := NewFilesystemController(clusterInfo, context, "", cephv1.CephVersionSpec{}, false, metav1.OwnerReference{})
+	controller := NewFilesystemController(clusterInfo, context, "", version.VersionedImage{}, false, metav1.OwnerReference{})
 
 	// convert the legacy filesystem object in memory and assert that a migration is needed
 	convertedFilesystem, migrationNeeded, err := getFilesystemObject(legacyFilesystem)

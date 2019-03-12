@@ -28,6 +28,7 @@ import (
 	daemonconfig "github.com/rook/rook/pkg/daemon/ceph/config"
 	cephconfig "github.com/rook/rook/pkg/operator/ceph/config"
 	"github.com/rook/rook/pkg/operator/ceph/pool"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,7 +61,7 @@ type ObjectStoreController struct {
 	clusterInfo *daemonconfig.ClusterInfo
 	context     *clusterd.Context
 	rookImage   string
-	cephVersion cephv1.CephVersionSpec
+	cephVersion version.VersionedImage
 	hostNetwork bool
 	ownerRef    metav1.OwnerReference
 }
@@ -70,7 +71,7 @@ func NewObjectStoreController(
 	clusterInfo *daemonconfig.ClusterInfo,
 	context *clusterd.Context,
 	rookImage string,
-	cephVersion cephv1.CephVersionSpec,
+	cephVersion version.VersionedImage,
 	hostNetwork bool,
 	ownerRef metav1.OwnerReference,
 ) *ObjectStoreController {

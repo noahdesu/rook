@@ -25,6 +25,7 @@ import (
 	rookalpha "github.com/rook/rook/pkg/apis/rook.io/v1alpha2"
 	"github.com/rook/rook/pkg/clusterd"
 	"github.com/rook/rook/pkg/operator/ceph/spec"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -45,13 +46,13 @@ type Mirroring struct {
 	resources   v1.ResourceRequirements
 	ownerRef    metav1.OwnerReference
 	spec        cephv1.RBDMirroringSpec
-	cephVersion cephv1.CephVersionSpec
+	cephVersion version.VersionedImage
 	rookVersion string
 	hostNetwork bool
 }
 
 // New creates an instance of the rbd mirroring
-func New(context *clusterd.Context, namespace, rookVersion string, cephVersion cephv1.CephVersionSpec, placement rookalpha.Placement, hostNetwork bool,
+func New(context *clusterd.Context, namespace, rookVersion string, cephVersion version.VersionedImage, placement rookalpha.Placement, hostNetwork bool,
 	spec cephv1.RBDMirroringSpec, resources v1.ResourceRequirements, ownerRef metav1.OwnerReference) *Mirroring {
 	return &Mirroring{
 		context:     context,

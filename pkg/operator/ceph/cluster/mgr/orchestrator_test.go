@@ -53,7 +53,7 @@ func TestOrchestratorModules(t *testing.T) {
 	c := &Cluster{context: context}
 
 	// the modules are skipped on luminous
-	c.cephVersion.Name = cephv1.Luminous
+	c.cephVersion.Image.Name = cephv1.Luminous
 	err := c.configureOrchestratorModules()
 	assert.Nil(t, err)
 	assert.False(t, orchestratorModuleEnabled)
@@ -61,7 +61,7 @@ func TestOrchestratorModules(t *testing.T) {
 	assert.False(t, rookBackendSet)
 
 	// the modules are skipped on mimic
-	c.cephVersion.Name = cephv1.Mimic
+	c.cephVersion.Image.Name = cephv1.Mimic
 	err = c.configureOrchestratorModules()
 	assert.Nil(t, err)
 	assert.False(t, orchestratorModuleEnabled)
@@ -69,7 +69,7 @@ func TestOrchestratorModules(t *testing.T) {
 	assert.False(t, rookBackendSet)
 
 	// the modules are configured on nautilus
-	c.cephVersion.Name = cephv1.Nautilus
+	c.cephVersion.Image.Name = cephv1.Nautilus
 	err = c.configureOrchestratorModules()
 	assert.Nil(t, err)
 	assert.True(t, orchestratorModuleEnabled)

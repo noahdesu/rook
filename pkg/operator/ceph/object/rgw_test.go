@@ -24,6 +24,7 @@ import (
 	cephv1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1"
 	"github.com/rook/rook/pkg/clusterd"
 	cephconfig "github.com/rook/rook/pkg/operator/ceph/config"
+	cephver "github.com/rook/rook/pkg/operator/ceph/version"
 	testop "github.com/rook/rook/pkg/operator/test"
 	exectest "github.com/rook/rook/pkg/util/exec/test"
 	"github.com/stretchr/testify/assert"
@@ -52,7 +53,7 @@ func TestStartRGW(t *testing.T) {
 	data := cephconfig.NewStatelessDaemonDataPathMap(cephconfig.RgwType, "my-fs")
 
 	// start a basic cluster
-	c := &clusterConfig{info, context, store, version, cephv1.CephVersionSpec{}, false, []metav1.OwnerReference{}, data}
+	c := &clusterConfig{info, context, store, version, cephver.VersionedImage{}, false, []metav1.OwnerReference{}, data}
 	err := c.createStore()
 	assert.Nil(t, err)
 
@@ -116,7 +117,7 @@ func TestCreateObjectStore(t *testing.T) {
 	data := cephconfig.NewStatelessDaemonDataPathMap(cephconfig.RgwType, "my-fs")
 
 	// create the pools
-	c := &clusterConfig{info, context, store, "1.2.3.4", cephv1.CephVersionSpec{}, false, []metav1.OwnerReference{}, data}
+	c := &clusterConfig{info, context, store, "1.2.3.4", cephver.VersionedImage{}, false, []metav1.OwnerReference{}, data}
 	err := c.createStore()
 	assert.Nil(t, err)
 }

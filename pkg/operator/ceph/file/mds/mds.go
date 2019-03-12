@@ -28,6 +28,7 @@ import (
 	"github.com/rook/rook/pkg/daemon/ceph/client"
 	cephconfig "github.com/rook/rook/pkg/daemon/ceph/config"
 	"github.com/rook/rook/pkg/operator/ceph/config"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,7 +51,7 @@ type Cluster struct {
 	clusterInfo *cephconfig.ClusterInfo
 	context     *clusterd.Context
 	rookVersion string
-	cephVersion cephv1.CephVersionSpec
+	cephVersion version.VersionedImage
 	HostNetwork bool
 	fs          cephv1.CephFilesystem
 	fsID        string
@@ -68,7 +69,7 @@ func NewCluster(
 	clusterInfo *cephconfig.ClusterInfo,
 	context *clusterd.Context,
 	rookVersion string,
-	cephVersion cephv1.CephVersionSpec,
+	cephVersion version.VersionedImage,
 	hostNetwork bool,
 	fs cephv1.CephFilesystem,
 	fsdetails *client.CephFilesystemDetails,

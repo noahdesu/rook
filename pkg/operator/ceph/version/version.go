@@ -4,12 +4,21 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+
+	cephv1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1"
 )
 
 type CephVersion struct {
 	Major int
 	Minor int
 	Extra int
+}
+
+// Convenience wrapper combining the Ceph image specification from the cluster
+// CRD along with the verion bits extracted at runtime from the given image.
+type VersionedImage struct {
+	Image   cephv1.CephVersionSpec
+	Version CephVersion
 }
 
 const (

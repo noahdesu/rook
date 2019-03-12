@@ -34,6 +34,7 @@ import (
 	"github.com/rook/rook/pkg/operator/ceph/cluster/mon"
 	"github.com/rook/rook/pkg/operator/ceph/cluster/osd"
 	"github.com/rook/rook/pkg/operator/ceph/cluster/rbd"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	batch "k8s.io/api/batch/v1"
 	"k8s.io/api/core/v1"
@@ -152,9 +153,13 @@ func (c *cluster) createInstance(rookImage string) error {
 		return fmt.Errorf("failed to create override configmap %s. %+v", c.Namespace, err)
 	}
 
+	verImage := version.VersionedImage{
+		Image: c.Spec.CephVersion,
+	}
+
 	// Start the mon pods
 	c.mons = mon.New(c.Info, c.context, c.Namespace,
-		c.Spec.DataDirHostPath, rookImage, c.Spec.CephVersion, c.Spec.Mon,
+		c.Spec.DataDirHostPath, rookImage, verImage, c.Spec.Mon,
 		cephv1.GetMonPlacement(c.Spec.Placement), c.Spec.Network.HostNetwork,
 		cephv1.GetMonResources(c.Spec.Resources), c.ownerRef)
 	clusterInfo, err := c.mons.Start()
@@ -174,7 +179,7 @@ func (c *cluster) createInstance(rookImage string) error {
 	}
 
 	mgrs := mgr.New(c.Info, c.context, c.Namespace, rookImage,
-		c.Spec.CephVersion, cephv1.GetMgrPlacement(c.Spec.Placement), c.Spec.Network.HostNetwork,
+		verImage, cephv1.GetMgrPlacement(c.Spec.Placement), c.Spec.Network.HostNetwork,
 		c.Spec.Dashboard, cephv1.GetMgrResources(c.Spec.Resources), c.ownerRef)
 	err = mgrs.Start()
 	if err != nil {
@@ -182,7 +187,7 @@ func (c *cluster) createInstance(rookImage string) error {
 	}
 
 	// Start the OSDs
-	osds := osd.New(c.context, c.Namespace, rookImage, c.Spec.CephVersion, c.Spec.Storage, c.Spec.DataDirHostPath,
+	osds := osd.New(c.context, c.Namespace, rookImage, verImage, c.Spec.Storage, c.Spec.DataDirHostPath,
 		cephv1.GetOSDPlacement(c.Spec.Placement), c.Spec.Network.HostNetwork, cephv1.GetOSDResources(c.Spec.Resources), c.ownerRef)
 	err = osds.Start()
 	if err != nil {
@@ -190,7 +195,7 @@ func (c *cluster) createInstance(rookImage string) error {
 	}
 
 	// Start the rbd mirroring daemon(s)
-	rbdmirror := rbd.New(c.context, c.Namespace, rookImage, c.Spec.CephVersion, cephv1.GetRBDMirrorPlacement(c.Spec.Placement),
+	rbdmirror := rbd.New(c.context, c.Namespace, rookImage, verImage, cephv1.GetRBDMirrorPlacement(c.Spec.Placement),
 		c.Spec.Network.HostNetwork, c.Spec.RBDMirroring, cephv1.GetRBDMirrorResources(c.Spec.Resources), c.ownerRef)
 	err = rbdmirror.Start()
 	if err != nil {

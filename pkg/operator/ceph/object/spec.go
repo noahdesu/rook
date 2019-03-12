@@ -153,7 +153,7 @@ func (c *clusterConfig) makeDaemonContainer() v1.Container {
 	// start the rgw daemon in the foreground
 	container := v1.Container{
 		Name:  "rgw",
-		Image: c.cephVersion.Image,
+		Image: c.cephVersion.Image.Image,
 		Command: []string{
 			"radosgw",
 		},
@@ -170,7 +170,7 @@ func (c *clusterConfig) makeDaemonContainer() v1.Container {
 			opspec.DaemonVolumeMounts(c.DataPathMap, c.instanceName()),
 			c.mimeTypesVolumeMount(),
 		),
-		Env:       opspec.DaemonEnvVars(c.cephVersion.Image),
+		Env:       opspec.DaemonEnvVars(c.cephVersion.Image.Image),
 		Resources: c.store.Spec.Gateway.Resources,
 	}
 

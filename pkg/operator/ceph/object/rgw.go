@@ -25,6 +25,7 @@ import (
 	cephconfig "github.com/rook/rook/pkg/daemon/ceph/config"
 	"github.com/rook/rook/pkg/operator/ceph/config"
 	"github.com/rook/rook/pkg/operator/ceph/pool"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,7 +37,7 @@ type clusterConfig struct {
 	context     *clusterd.Context
 	store       cephv1.CephObjectStore
 	rookVersion string
-	cephVersion cephv1.CephVersionSpec
+	cephVersion version.VersionedImage
 	hostNetwork bool
 	ownerRefs   []metav1.OwnerReference
 	DataPathMap *config.DataPathMap

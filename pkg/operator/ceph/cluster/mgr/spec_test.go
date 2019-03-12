@@ -27,6 +27,7 @@ import (
 	rookalpha "github.com/rook/rook/pkg/apis/rook.io/v1alpha2"
 	"github.com/rook/rook/pkg/clusterd"
 	cephtest "github.com/rook/rook/pkg/operator/ceph/test"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	optest "github.com/rook/rook/pkg/operator/test"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -35,12 +36,15 @@ import (
 
 func TestPodSpec(t *testing.T) {
 	clusterInfo := &cephconfig.ClusterInfo{FSID: "myfsid"}
+	verImage := version.VersionedImage{
+		Image: cephv1.CephVersionSpec{Image: "ceph/ceph:myceph"},
+	}
 	c := New(
 		clusterInfo,
 		&clusterd.Context{Clientset: optest.New(1)},
 		"ns",
 		"rook/rook:myversion",
-		cephv1.CephVersionSpec{Image: "ceph/ceph:myceph"},
+		verImage,
 		rookalpha.Placement{},
 		false,
 		cephv1.DashboardSpec{},
@@ -81,7 +85,7 @@ func TestServiceSpec(t *testing.T) {
 		&clusterd.Context{Clientset: optest.New(1)},
 		"ns",
 		"myversion",
-		cephv1.CephVersionSpec{},
+		version.VersionedImage{},
 		rookalpha.Placement{},
 		false,
 		cephv1.DashboardSpec{},
@@ -102,7 +106,7 @@ func TestHostNetwork(t *testing.T) {
 		&clusterd.Context{Clientset: optest.New(1)},
 		"ns",
 		"myversion",
-		cephv1.CephVersionSpec{},
+		version.VersionedImage{},
 		rookalpha.Placement{},
 		true,
 		cephv1.DashboardSpec{},

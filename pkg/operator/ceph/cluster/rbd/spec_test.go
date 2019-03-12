@@ -22,6 +22,7 @@ import (
 	cephv1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1"
 	rookalpha "github.com/rook/rook/pkg/apis/rook.io/v1alpha2"
 	"github.com/rook/rook/pkg/clusterd"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/api/core/v1"
@@ -29,10 +30,13 @@ import (
 )
 
 func TestPodSpec(t *testing.T) {
+	verImage := version.VersionedImage{
+		Image: cephv1.CephVersionSpec{Image: "ceph/ceph:myceph"},
+	}
 	c := New(&clusterd.Context{},
 		"ns",
 		"rook/rook:myversion",
-		cephv1.CephVersionSpec{Image: "ceph/ceph:myceph"},
+		verImage,
 		rookalpha.Placement{},
 		false,
 		cephv1.RBDMirroringSpec{Workers: 2},

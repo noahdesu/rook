@@ -24,6 +24,7 @@ import (
 	"github.com/rook/rook/pkg/clusterd"
 	"github.com/rook/rook/pkg/operator/ceph/config"
 	cephtest "github.com/rook/rook/pkg/operator/ceph/test"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	testop "github.com/rook/rook/pkg/operator/test"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
@@ -37,6 +38,7 @@ func TestPodSpecs(t *testing.T) {
 }
 
 func testPodSpec(t *testing.T, monID string) {
+	verImage := version.VersionedImage{Image: cephv1.CephVersionSpec{Image: "ceph/ceph:myceph"}}
 	clientset := testop.New(1)
 	c := New(
 		testop.CreateConfigDir(0),
@@ -44,7 +46,7 @@ func testPodSpec(t *testing.T, monID string) {
 		"ns",
 		"/var/lib/rook",
 		"rook/rook:myversion",
-		cephv1.CephVersionSpec{Image: "ceph/ceph:myceph"},
+		verImage,
 		cephv1.MonSpec{Count: 3, AllowMultiplePerNode: true},
 		rookalpha.Placement{},
 		false,

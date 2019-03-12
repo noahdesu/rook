@@ -105,9 +105,9 @@ func (m *Mirroring) makeMirroringDaemonContainer(daemonName string) v1.Container
 			"--conf", "/etc/ceph/ceph.conf",
 			"--keyring", "/etc/ceph/keyring",
 		},
-		Image:        m.cephVersion.Image,
+		Image:        m.cephVersion.Image.Image,
 		VolumeMounts: opspec.CephVolumeMounts(),
-		Env:          k8sutil.ClusterDaemonEnvVars(m.cephVersion.Image),
+		Env:          k8sutil.ClusterDaemonEnvVars(m.cephVersion.Image.Image),
 		Resources:    m.resources,
 	}
 	return container

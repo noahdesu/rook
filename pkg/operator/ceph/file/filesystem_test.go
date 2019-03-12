@@ -29,6 +29,7 @@ import (
 	cephconfig "github.com/rook/rook/pkg/daemon/ceph/config"
 	cephtest "github.com/rook/rook/pkg/daemon/ceph/test"
 	"github.com/rook/rook/pkg/operator/ceph/file/mds"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	testopk8s "github.com/rook/rook/pkg/operator/k8sutil/test"
 	testop "github.com/rook/rook/pkg/operator/test"
 	exectest "github.com/rook/rook/pkg/util/exec/test"
@@ -114,14 +115,14 @@ func TestCreateFilesystem(t *testing.T) {
 	clusterInfo := &cephconfig.ClusterInfo{FSID: "myfsid"}
 
 	// start a basic cluster
-	err := createFilesystem(clusterInfo, context, fs, "v0.1", cephv1.CephVersionSpec{}, false, []metav1.OwnerReference{})
+	err := createFilesystem(clusterInfo, context, fs, "v0.1", version.VersionedImage{}, false, []metav1.OwnerReference{})
 	assert.Nil(t, err)
 	validateStart(t, context, fs)
 	assert.ElementsMatch(t, []string{}, testopk8s.DeploymentNamesUpdated(deploymentsUpdated))
 	testopk8s.ClearDeploymentsUpdated(deploymentsUpdated)
 
 	// starting again should be a no-op
-	err = createFilesystem(clusterInfo, context, fs, "v0.1", cephv1.CephVersionSpec{}, false, []metav1.OwnerReference{})
+	err = createFilesystem(clusterInfo, context, fs, "v0.1", version.VersionedImage{}, false, []metav1.OwnerReference{})
 	assert.Nil(t, err)
 	validateStart(t, context, fs)
 	assert.ElementsMatch(t, []string{"rook-ceph-mds-myfs-a", "rook-ceph-mds-myfs-b"}, testopk8s.DeploymentNamesUpdated(deploymentsUpdated))
@@ -142,7 +143,7 @@ func TestCreateFilesystem(t *testing.T) {
 		Clientset: testop.New(3)}
 
 	//Create another filesystem which should fail
-	err = createFilesystem(clusterInfo, context, fs, "v0.1", cephv1.CephVersionSpec{}, false, []metav1.OwnerReference{})
+	err = createFilesystem(clusterInfo, context, fs, "v0.1", version.VersionedImage{}, false, []metav1.OwnerReference{})
 	assert.Equal(t, "failed to create filesystem myfs: Cannot create multiple filesystems. Enable ROOK_ALLOW_MULTIPLE_FILESYSTEMS env variable to create more than one", err.Error())
 }
 
@@ -179,12 +180,12 @@ func TestCreateNopoolFilesystem(t *testing.T) {
 	clusterInfo := &cephconfig.ClusterInfo{FSID: "myfsid"}
 
 	// start a basic cluster
-	err := createFilesystem(clusterInfo, context, fs, "v0.1", cephv1.CephVersionSpec{}, false, []metav1.OwnerReference{})
+	err := createFilesystem(clusterInfo, context, fs, "v0.1", version.VersionedImage{}, false, []metav1.OwnerReference{})
 	assert.Nil(t, err)
 	validateStart(t, context, fs)
 
 	// starting again should be a no-op
-	err = createFilesystem(clusterInfo, context, fs, "v0.1", cephv1.CephVersionSpec{}, false, []metav1.OwnerReference{})
+	err = createFilesystem(clusterInfo, context, fs, "v0.1", version.VersionedImage{}, false, []metav1.OwnerReference{})
 	assert.Nil(t, err)
 	validateStart(t, context, fs)
 

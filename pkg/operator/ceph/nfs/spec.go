@@ -169,14 +169,14 @@ func (c *CephNFSController) daemonContainer(n cephv1.CephNFS, name string, binar
 			"run",
 		},
 		Name:  "ceph-nfs",
-		Image: c.cephVersion.Image,
+		Image: c.cephVersion.Image.Image,
 		VolumeMounts: append(
 			opspec.CephVolumeMounts(),
 			configMount,
 			binariesMount,
 		),
 		Env: append(
-			k8sutil.ClusterDaemonEnvVars(c.cephVersion.Image),
+			k8sutil.ClusterDaemonEnvVars(c.cephVersion.Image.Image),
 			v1.EnvVar{Name: "ROOK_CEPH_NFS_NAME", Value: name},
 		),
 		Resources: n.Spec.Server.Resources,

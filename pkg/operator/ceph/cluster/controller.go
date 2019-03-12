@@ -37,6 +37,7 @@ import (
 	"github.com/rook/rook/pkg/operator/ceph/object"
 	"github.com/rook/rook/pkg/operator/ceph/object/user"
 	"github.com/rook/rook/pkg/operator/ceph/pool"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -194,6 +195,10 @@ func (c *ClusterController) onAdd(obj interface{}) {
 		}
 	}
 
+	verImage := version.VersionedImage{
+		Image: cluster.Spec.CephVersion,
+	}
+
 	// Start the Rook cluster components. Retry several times in case of failure.
 	err = wait.Poll(clusterCreateInterval, clusterCreateTimeout, func() (bool, error) {
 		if err := c.updateClusterStatus(clusterObj.Namespace, clusterObj.Name, cephv1.ClusterStateCreating, ""); err != nil {
@@ -229,7 +234,7 @@ func (c *ClusterController) onAdd(obj interface{}) {
 	poolController.StartWatch(cluster.Namespace, cluster.stopCh)
 
 	// Start object store CRD watcher
-	objectStoreController := object.NewObjectStoreController(cluster.Info, c.context, c.rookImage, cluster.Spec.CephVersion, cluster.Spec.Network.HostNetwork, cluster.ownerRef)
+	objectStoreController := object.NewObjectStoreController(cluster.Info, c.context, c.rookImage, verImage, cluster.Spec.Network.HostNetwork, cluster.ownerRef)
 	objectStoreController.StartWatch(cluster.Namespace, cluster.stopCh)
 
 	// Start object store user CRD watcher
@@ -237,11 +242,11 @@ func (c *ClusterController) onAdd(obj interface{}) {
 	objectStoreUserController.StartWatch(cluster.Namespace, cluster.stopCh)
 
 	// Start file system CRD watcher
-	fileController := file.NewFilesystemController(cluster.Info, c.context, c.rookImage, cluster.Spec.CephVersion, cluster.Spec.Network.HostNetwork, cluster.ownerRef)
+	fileController := file.NewFilesystemController(cluster.Info, c.context, c.rookImage, verImage, cluster.Spec.Network.HostNetwork, cluster.ownerRef)
 	fileController.StartWatch(cluster.Namespace, cluster.stopCh)
 
 	// Start nfs ganesha CRD watcher
-	ganeshaController := nfs.NewCephNFSController(c.context, c.rookImage, cluster.Spec.CephVersion, cluster.Spec.Network.HostNetwork, cluster.ownerRef)
+	ganeshaController := nfs.NewCephNFSController(c.context, c.rookImage, verImage, cluster.Spec.Network.HostNetwork, cluster.ownerRef)
 	ganeshaController.StartWatch(cluster.Namespace, cluster.stopCh)
 
 	// Start mon health checker

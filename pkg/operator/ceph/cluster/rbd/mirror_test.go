@@ -22,6 +22,7 @@ import (
 	cephv1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1"
 	rookalpha "github.com/rook/rook/pkg/apis/rook.io/v1alpha2"
 	"github.com/rook/rook/pkg/clusterd"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	testop "github.com/rook/rook/pkg/operator/test"
 	exectest "github.com/rook/rook/pkg/util/exec/test"
 	"github.com/stretchr/testify/assert"
@@ -43,10 +44,14 @@ func TestRBDMirror(t *testing.T) {
 		return "", nil
 	}
 
+	verImage := version.VersionedImage{
+		Image: cephv1.CephVersionSpec{Image: "ceph/ceph:myceph"},
+	}
+
 	c := New(&clusterd.Context{Clientset: clientset, Executor: executor},
 		"ns",
 		"rook/rook:myversion",
-		cephv1.CephVersionSpec{Image: "ceph/ceph:myceph"},
+		verImage,
 		rookalpha.Placement{},
 		false,
 		cephv1.RBDMirroringSpec{Workers: 2},

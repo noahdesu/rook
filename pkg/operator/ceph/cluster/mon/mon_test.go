@@ -36,6 +36,7 @@ import (
 	"github.com/rook/rook/pkg/daemon/ceph/client"
 	clienttest "github.com/rook/rook/pkg/daemon/ceph/client/test"
 	cephtest "github.com/rook/rook/pkg/daemon/ceph/test"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	"github.com/rook/rook/pkg/operator/test"
 	exectest "github.com/rook/rook/pkg/util/exec/test"
 	"github.com/stretchr/testify/assert"
@@ -212,7 +213,7 @@ func TestSaveMonEndpoints(t *testing.T) {
 	configDir, _ := ioutil.TempDir("", "")
 	defer os.RemoveAll(configDir)
 	c := New(test.CreateConfigDir(1), &clusterd.Context{Clientset: clientset, ConfigDir: configDir},
-		"ns", "", "myversion", cephv1.CephVersionSpec{},
+		"ns", "", "myversion", version.VersionedImage{},
 		cephv1.MonSpec{Count: 3, AllowMultiplePerNode: true}, rookalpha.Placement{}, false,
 		v1.ResourceRequirements{}, metav1.OwnerReference{})
 

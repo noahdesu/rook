@@ -27,6 +27,7 @@ import (
 	"github.com/rook/rook/pkg/daemon/ceph/client"
 	cephconfig "github.com/rook/rook/pkg/daemon/ceph/config"
 	"github.com/rook/rook/pkg/operator/ceph/config"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -54,7 +55,7 @@ type Cluster struct {
 	resources   v1.ResourceRequirements
 	ownerRef    metav1.OwnerReference
 	dashboard   cephv1.DashboardSpec
-	cephVersion cephv1.CephVersionSpec
+	cephVersion version.VersionedImage
 	rookVersion string
 	exitCode    func(err error) (int, bool)
 }
@@ -64,7 +65,7 @@ func New(
 	clusterInfo *cephconfig.ClusterInfo,
 	context *clusterd.Context,
 	namespace, rookVersion string,
-	cephVersion cephv1.CephVersionSpec,
+	cephVersion version.VersionedImage,
 	placement rookalpha.Placement,
 	hostNetwork bool,
 	dashboard cephv1.DashboardSpec,

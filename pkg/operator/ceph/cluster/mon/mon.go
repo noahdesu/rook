@@ -36,6 +36,7 @@ import (
 	cephutil "github.com/rook/rook/pkg/daemon/ceph/util"
 	"github.com/rook/rook/pkg/operator/ceph/config"
 	"github.com/rook/rook/pkg/operator/ceph/config/keyring"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -82,7 +83,7 @@ type Cluster struct {
 	Namespace            string
 	Keyring              string
 	rookVersion          string
-	cephVersion          cephv1.CephVersionSpec
+	cephVersion          version.VersionedImage
 	Count                int
 	AllowMultiplePerNode bool
 	MonCountMutex        sync.Mutex
@@ -133,7 +134,7 @@ func New(
 	clusterInfo *cephconfig.ClusterInfo,
 	context *clusterd.Context,
 	namespace, dataDirHostPath, rookVersion string,
-	cephVersion cephv1.CephVersionSpec,
+	cephVersion version.VersionedImage,
 	mon cephv1.MonSpec,
 	placement rookalpha.Placement,
 	hostNetwork bool,
@@ -260,7 +261,7 @@ func (c *Cluster) initClusterInfo() error {
 	var err error
 	// get the cluster info from secret
 	c.clusterInfo, c.maxMonID, c.mapping, err = CreateOrLoadClusterInfo(c.context, c.Namespace, &c.ownerRef)
-	c.clusterInfo.CephVersionName = c.cephVersion.Name
+	c.clusterInfo.CephVersionName = c.cephVersion.Image.Name
 
 	if err != nil {
 		return fmt.Errorf("failed to get cluster info. %+v", err)

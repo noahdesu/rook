@@ -26,6 +26,7 @@ import (
 	"github.com/rook/rook/pkg/daemon/ceph/model"
 	"github.com/rook/rook/pkg/operator/ceph/file/mds"
 	"github.com/rook/rook/pkg/operator/ceph/pool"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -49,7 +50,7 @@ func createFilesystem(
 	context *clusterd.Context,
 	fs cephv1.CephFilesystem,
 	rookVersion string,
-	cephVersion cephv1.CephVersionSpec,
+	cephVersion version.VersionedImage,
 	hostNetwork bool,
 	ownerRefs []metav1.OwnerReference,
 ) error {

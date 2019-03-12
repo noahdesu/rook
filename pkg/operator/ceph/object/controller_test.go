@@ -25,6 +25,7 @@ import (
 	rookv1alpha2 "github.com/rook/rook/pkg/apis/rook.io/v1alpha2"
 	rookfake "github.com/rook/rook/pkg/client/clientset/versioned/fake"
 	"github.com/rook/rook/pkg/clusterd"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	testop "github.com/rook/rook/pkg/operator/test"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/api/core/v1"
@@ -92,7 +93,7 @@ func TestMigrateObjectStoreObject(t *testing.T) {
 		RookClientset: rookfake.NewSimpleClientset(legacyObjectStore),
 	}
 	info := testop.CreateConfigDir(1)
-	controller := NewObjectStoreController(info, context, "", cephv1.CephVersionSpec{}, false, metav1.OwnerReference{})
+	controller := NewObjectStoreController(info, context, "", version.VersionedImage{}, false, metav1.OwnerReference{})
 
 	// convert the legacy objectstore object in memory and assert that a migration is needed
 	convertedObjectStore, migrationNeeded, err := getObjectStoreObject(legacyObjectStore)

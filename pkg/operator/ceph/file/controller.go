@@ -28,6 +28,7 @@ import (
 	"github.com/rook/rook/pkg/clusterd"
 	cephconfig "github.com/rook/rook/pkg/daemon/ceph/config"
 	"github.com/rook/rook/pkg/operator/ceph/pool"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,7 +61,7 @@ type FilesystemController struct {
 	clusterInfo *cephconfig.ClusterInfo
 	context     *clusterd.Context
 	rookVersion string
-	cephVersion cephv1.CephVersionSpec
+	cephVersion version.VersionedImage
 	hostNetwork bool
 	ownerRef    metav1.OwnerReference
 }
@@ -70,7 +71,7 @@ func NewFilesystemController(
 	clusterInfo *cephconfig.ClusterInfo,
 	context *clusterd.Context,
 	rookVersion string,
-	cephVersion cephv1.CephVersionSpec,
+	cephVersion version.VersionedImage,
 	hostNetwork bool,
 	ownerRef metav1.OwnerReference,
 ) *FilesystemController {

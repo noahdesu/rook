@@ -47,7 +47,7 @@ type mgrConfig struct {
 func (c *Cluster) dashboardPort() int {
 	if c.dashboard.Port == 0 {
 		// select default ports
-		if c.cephVersion.Name == cephv1.Luminous {
+		if c.cephVersion.Image.Name == cephv1.Luminous {
 			return dashboardPortHTTP
 		}
 		return dashboardPortHTTPS

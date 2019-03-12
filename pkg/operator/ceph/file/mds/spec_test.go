@@ -27,6 +27,7 @@ import (
 	cephconfig "github.com/rook/rook/pkg/daemon/ceph/config"
 
 	cephtest "github.com/rook/rook/pkg/operator/ceph/test"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	testop "github.com/rook/rook/pkg/operator/test"
 	"github.com/stretchr/testify/assert"
 	apps "k8s.io/api/apps/v1"
@@ -51,12 +52,14 @@ func testDeploymentObject(hostNetwork bool) *apps.Deployment {
 					},
 				}}}}
 	clusterInfo := &cephconfig.ClusterInfo{FSID: "myfsid"}
-
+	verImage := version.VersionedImage{
+		Image: cephv1.CephVersionSpec{Image: "ceph/ceph:testversion", Name: "mimic"},
+	}
 	c := NewCluster(
 		clusterInfo,
 		&clusterd.Context{Clientset: testop.New(1)},
 		"rook/rook:myversion",
-		cephv1.CephVersionSpec{Image: "ceph/ceph:testversion", Name: "mimic"},
+		verImage,
 		hostNetwork,
 		fs,
 		&client.CephFilesystemDetails{ID: 15},

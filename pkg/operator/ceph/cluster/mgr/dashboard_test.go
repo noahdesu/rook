@@ -21,6 +21,7 @@ import (
 
 	cephv1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1"
 	"github.com/rook/rook/pkg/clusterd"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	"github.com/rook/rook/pkg/operator/test"
 	exectest "github.com/rook/rook/pkg/util/exec/test"
 	"github.com/stretchr/testify/assert"
@@ -91,8 +92,11 @@ func TestStartSecureDashboard(t *testing.T) {
 			return "", nil
 		},
 	}
+	verImage := version.VersionedImage{
+		Image: cephv1.CephVersionSpec{Name: cephv1.Mimic, Image: "ceph/ceph:v13.2.2"},
+	}
 	c := &Cluster{context: &clusterd.Context{Clientset: test.New(3), Executor: executor}, Namespace: "myns",
-		dashboard: cephv1.DashboardSpec{Enabled: true}, cephVersion: cephv1.CephVersionSpec{Name: cephv1.Mimic, Image: "ceph/ceph:v13.2.2"}}
+		dashboard: cephv1.DashboardSpec{Enabled: true}, cephVersion: verImage}
 	c.exitCode = func(err error) (int, bool) {
 		if exitCodeResponse != 0 {
 			return exitCodeResponse, true

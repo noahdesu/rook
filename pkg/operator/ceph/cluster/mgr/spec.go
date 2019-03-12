@@ -60,7 +60,7 @@ func (c *Cluster) makeDeployment(mgrConfig *mgrConfig) *apps.Deployment {
 		podSpec.Spec.DNSPolicy = v1.DNSClusterFirstWithHostNet
 	}
 	c.placement.ApplyToPodSpec(&podSpec.Spec)
-	if c.cephVersion.Name == cephv1.Luminous || c.cephVersion.Name == "" {
+	if c.cephVersion.Image.Name == cephv1.Luminous || c.cephVersion.Image.Name == "" {
 		// prepend the keyring-copy workaround for luminous clusters
 		podSpec.Spec.InitContainers = append(
 			[]v1.Container{c.makeCopyKeyringInitContainer(mgrConfig)},
@@ -105,7 +105,7 @@ func (c *Cluster) makeCopyKeyringInitContainer(mgrConfig *mgrConfig) v1.Containe
 			keyring.VolumeMount().KeyringFilePath(),
 			mgrConfig.DataPathMap.ContainerDataDir,
 		},
-		Image:        c.cephVersion.Image,
+		Image:        c.cephVersion.Image.Image,
 		VolumeMounts: opspec.DaemonVolumeMounts(mgrConfig.DataPathMap, mgrConfig.ResourceName),
 		// no env vars needed
 		Resources: c.resources,
@@ -120,14 +120,14 @@ func (c *Cluster) makeSetServerAddrInitContainer(mgrConfig *mgrConfig, mgrModule
 	//  N: config     set mgr.a mgr/<mod>/server_addr $(ROOK_CEPH_<MOD>_SERVER_ADDR) --force
 	podIPEnvVar := "ROOK_POD_IP"
 	cfgSetArgs := []string{"config", "set"}
-	if c.cephVersion.Name == cephv1.Luminous || c.cephVersion.Name == "" {
+	if c.cephVersion.Image.Name == cephv1.Luminous || c.cephVersion.Image.Name == "" {
 		cfgSetArgs[0] = "config-key"
 	} else {
 		cfgSetArgs = append(cfgSetArgs, fmt.Sprintf("mgr.%s", mgrConfig.DaemonID))
 	}
 	cfgPath := fmt.Sprintf("mgr/%s/server_addr", mgrModule)
 	cfgSetArgs = append(cfgSetArgs, cfgPath, opspec.ContainerEnvVarReference(podIPEnvVar))
-	if cephv1.VersionAtLeast(c.cephVersion.Name, cephv1.Nautilus) {
+	if cephv1.VersionAtLeast(c.cephVersion.Image.Name, cephv1.Nautilus) {
 		cfgSetArgs = append(cfgSetArgs, "--force")
 	}
 	cfgSetArgs = append(cfgSetArgs, "--verbose")
@@ -141,13 +141,13 @@ func (c *Cluster) makeSetServerAddrInitContainer(mgrConfig *mgrConfig, mgrModule
 			opspec.AdminFlags(c.clusterInfo),
 			cfgSetArgs...,
 		),
-		Image: c.cephVersion.Image,
+		Image: c.cephVersion.Image.Image,
 		VolumeMounts: append(
 			opspec.DaemonVolumeMounts(mgrConfig.DataPathMap, mgrConfig.ResourceName),
 			keyring.VolumeMount().Admin(),
 		),
 		Env: append(
-			opspec.DaemonEnvVars(c.cephVersion.Image),
+			opspec.DaemonEnvVars(c.cephVersion.Image.Image),
 			k8sutil.PodIPEnvVar(podIPEnvVar),
 		),
 		Resources: c.resources,
@@ -165,7 +165,7 @@ func (c *Cluster) makeMgrDaemonContainer(mgrConfig *mgrConfig) v1.Container {
 			opspec.DaemonFlags(c.clusterInfo, config.MgrType, mgrConfig.DaemonID),
 			"--foreground",
 		),
-		Image:        c.cephVersion.Image,
+		Image:        c.cephVersion.Image.Image,
 		VolumeMounts: opspec.DaemonVolumeMounts(mgrConfig.DataPathMap, mgrConfig.ResourceName),
 		Ports: []v1.ContainerPort{
 			{
@@ -184,7 +184,7 @@ func (c *Cluster) makeMgrDaemonContainer(mgrConfig *mgrConfig) v1.Container {
 				Protocol:      v1.ProtocolTCP,
 			},
 		},
-		Env:       opspec.DaemonEnvVars(c.cephVersion.Image),
+		Env:       opspec.DaemonEnvVars(c.cephVersion.Image.Image),
 		Resources: c.resources,
 	}
 	return container
