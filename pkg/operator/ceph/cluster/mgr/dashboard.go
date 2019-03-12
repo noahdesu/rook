@@ -25,8 +25,8 @@ import (
 	"syscall"
 	"time"
 
-	cephv1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1"
 	"github.com/rook/rook/pkg/daemon/ceph/client"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -116,14 +116,14 @@ func (c *Cluster) toggleDashboardModule(dashboardPort int) error {
 
 func (c *Cluster) configureDashboardModule(dashboardPort int) error {
 	// url prefix
-	hasChanged, err := client.MgrSetAllConfig(c.context, c.Namespace, c.cephVersion.Image.Name, "mgr/dashboard/url_prefix", c.dashboard.UrlPrefix)
+	hasChanged, err := client.MgrSetAllConfig(c.context, c.Namespace, c.cephVersion.Version, "mgr/dashboard/url_prefix", c.dashboard.UrlPrefix)
 	if err != nil {
 		return err
 	}
 
 	// server port
 	port := strconv.Itoa(dashboardPort)
-	changed, err := client.MgrSetAllConfig(c.context, c.Namespace, c.cephVersion.Image.Name, "mgr/dashboard/server_port", port)
+	changed, err := client.MgrSetAllConfig(c.context, c.Namespace, c.cephVersion.Version, "mgr/dashboard/server_port", port)
 	if err != nil {
 		return err
 	}
@@ -136,7 +136,7 @@ func (c *Cluster) configureDashboardModule(dashboardPort int) error {
 	} else {
 		ssl = strconv.FormatBool(*c.dashboard.SSL)
 	}
-	changed, err = client.MgrSetAllConfig(c.context, c.Namespace, c.cephVersion.Image.Name, "mgr/dashboard/ssl", ssl)
+	changed, err = client.MgrSetAllConfig(c.context, c.Namespace, c.cephVersion.Version, "mgr/dashboard/ssl", ssl)
 	if err != nil {
 		return err
 	}
@@ -150,7 +150,7 @@ func (c *Cluster) configureDashboardModule(dashboardPort int) error {
 }
 
 func (c *Cluster) initializeSecureDashboard() error {
-	if c.cephVersion.Image.Name == cephv1.Luminous || c.cephVersion.Image.Name == "" {
+	if c.cephVersion.Version.IsRelease(version.Luminous) {
 		logger.Infof("skipping cert and user configuration on luminous")
 		return nil
 	}

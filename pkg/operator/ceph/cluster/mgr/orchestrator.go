@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"time"
 
-	cephv1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1"
 	"github.com/rook/rook/pkg/daemon/ceph/client"
+	"github.com/rook/rook/pkg/operator/ceph/version"
 )
 
 const (
@@ -36,7 +36,7 @@ var (
 
 // Ceph docs about the orchestrator modules: http://docs.ceph.com/docs/master/mgr/orchestrator_cli/
 func (c *Cluster) configureOrchestratorModules() error {
-	if !cephv1.VersionAtLeast(c.cephVersion.Image.Name, cephv1.Nautilus) {
+	if !c.cephVersion.Version.AtLeast(version.Nautilus) {
 		logger.Infof("skipping enabling orchestrator modules on releases older than nautilus")
 		return nil
 	}
