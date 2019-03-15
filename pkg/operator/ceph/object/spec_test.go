@@ -23,6 +23,7 @@ import (
 	"github.com/rook/rook/pkg/clusterd"
 	cephconfig "github.com/rook/rook/pkg/operator/ceph/config"
 	cephtest "github.com/rook/rook/pkg/operator/ceph/test"
+	cephver "github.com/rook/rook/pkg/operator/ceph/version"
 	testop "github.com/rook/rook/pkg/operator/test"
 	exectest "github.com/rook/rook/pkg/util/exec/test"
 	"github.com/stretchr/testify/assert"
@@ -41,13 +42,14 @@ func TestPodSpecs(t *testing.T) {
 		},
 	}
 	info := testop.CreateConfigDir(1)
+	info.CephVersion = cephver.Mimic
 	data := cephconfig.NewStatelessDaemonDataPathMap(cephconfig.RgwType, "default")
 
 	c := &clusterConfig{
 		clusterInfo: info,
 		store:       store,
 		rookVersion: "rook/rook:myversion",
-		cephVersion: cephv1.CephVersionSpec{Image: "ceph/ceph:v13.2.1", Name: "mimic"},
+		cephVersion: cephv1.CephVersionSpec{Image: "ceph/ceph:v13.2.1"},
 		hostNetwork: true,
 		DataPathMap: data,
 	}
@@ -70,6 +72,7 @@ func TestSSLPodSpec(t *testing.T) {
 		},
 	}
 	info := testop.CreateConfigDir(1)
+	info.CephVersion = cephver.Mimic
 	data := cephconfig.NewStatelessDaemonDataPathMap(cephconfig.RgwType, "default")
 	store.Spec.Gateway.SSLCertificateRef = "mycert"
 	store.Spec.Gateway.SecurePort = 443
@@ -78,7 +81,7 @@ func TestSSLPodSpec(t *testing.T) {
 		clusterInfo: info,
 		store:       store,
 		rookVersion: "rook/rook:myversion",
-		cephVersion: cephv1.CephVersionSpec{Image: "ceph/ceph:v13.2.1", Name: "mimic"},
+		cephVersion: cephv1.CephVersionSpec{Image: "ceph/ceph:v13.2.1"},
 		hostNetwork: true,
 		DataPathMap: data,
 	}
