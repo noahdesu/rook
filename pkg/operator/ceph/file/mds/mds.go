@@ -230,7 +230,8 @@ func DeleteCluster(context *clusterd.Context, namespace, fsName string) error {
 // Ceph docs: http://docs.ceph.com/docs/master/cephfs/upgrading/
 func prepareForDaemonUpgrade(
 	context *clusterd.Context,
-	cephVersionName, clusterName, fsName string,
+	cephVersion cephver.CephVersion,
+	clusterName, fsName string,
 	timeout time.Duration,
 ) error {
 	logger.Infof("preparing filesystem %s for daemon upgrade", fsName)
@@ -239,7 +240,7 @@ func prepareForDaemonUpgrade(
 	//   See more:  https://ceph.com/releases/v13-2-0-mimic-released/
 	//              http://docs.ceph.com/docs/mimic/cephfs/upgrading/
 	// As of Oct. 2018, this is only necessary for Luminous and Mimic.
-	if err := client.SetNumMDSRanks(context, cephVersionName, clusterName, fsName, 1); err != nil {
+	if err := client.SetNumMDSRanks(context, cephVersion, clusterName, fsName, 1); err != nil {
 		return fmt.Errorf("Could not Prepare filesystem %s for daemon upgrade: %+v", fsName, err)
 	}
 	if err := client.WaitForActiveRanks(context, clusterName, fsName, 1, false, timeout); err != nil {
