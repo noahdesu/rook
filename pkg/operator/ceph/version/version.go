@@ -97,3 +97,7 @@ func (v *CephVersion) AtLeast(other CephVersion) bool {
 func (v *CephVersion) AtLeastNautilus() bool {
 	return v.AtLeast(Nautilus)
 }
+
+func (v *CephVersion) AtLeastMimic() bool {
+	return v.AtLeast(Mimic)
+}
