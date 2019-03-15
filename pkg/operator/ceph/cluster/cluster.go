@@ -192,6 +192,7 @@ func (c *cluster) createInstance(rookImage string) error {
 			return fmt.Errorf("failed to create initial crushmap: %+v", err)
 		}
 
+		// TODO: c.Info.CephVersion needs to be set at this point
 		mgrs := mgr.New(c.Info, c.context, c.Namespace, rookImage,
 			spec.CephVersion, cephv1.GetMgrPlacement(spec.Placement), spec.Network.HostNetwork,
 			spec.Dashboard, cephv1.GetMgrResources(spec.Resources), c.ownerRef)

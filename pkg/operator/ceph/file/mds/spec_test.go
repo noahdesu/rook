@@ -52,6 +52,7 @@ func testDeploymentObject(hostNetwork bool) *apps.Deployment {
 				}}}}
 	clusterInfo := &cephconfig.ClusterInfo{FSID: "myfsid"}
 
+	// TODO: move version name info into clusterInfo structure
 	c := NewCluster(
 		clusterInfo,
 		&clusterd.Context{Clientset: testop.New(1)},

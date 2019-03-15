@@ -68,6 +68,8 @@ func TestStartMGR(t *testing.T) {
 	defer os.RemoveAll(c.dataDir)
 
 	// start a basic service
+	// TODO: may need to set version in clusterInfo.CephVersion (see other
+	// c.Start() callers
 	err := c.Start()
 	assert.Nil(t, err)
 	validateStart(t, c)
