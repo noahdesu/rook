@@ -109,7 +109,7 @@ func NewClusterController(context *clusterd.Context, rookImage string, volumeAtt
 }
 
 // Watch watches instances of cluster resources
-func (c *ClusterController) StartWatch(namespace, rookOperatorNamespace string, stopCh chan struct{}) error {
+func (c *ClusterController) StartWatch(namespace string, stopCh chan struct{}) error {
 	resourceHandlerFuncs := cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.onAdd,
 		UpdateFunc: c.onUpdate,
@@ -146,7 +146,7 @@ func (c *ClusterController) StartWatch(namespace, rookOperatorNamespace string, 
 	// watch for updates to the device discovery configmap
 	_, deviceCMController := cache.NewInformer(
 		cache.NewFilteredListWatchFromClient(c.context.Clientset.CoreV1().RESTClient(),
-			"configmaps", rookOperatorNamespace, func(options *metav1.ListOptions) {
+			"configmaps", namespace, func(options *metav1.ListOptions) {
 				options.LabelSelector = fmt.Sprintf("%s=%s", k8sutil.AppAttr, discoverDaemon.AppName)
 			},
 		),

@@ -153,7 +153,7 @@ func (o *Operator) Run() error {
 	}
 
 	// watch for changes to the rook clusters
-	o.clusterController.StartWatch(namespaceToWatch, namespace, stopChan)
+	o.clusterController.StartWatch(namespaceToWatch, stopChan)
 
 	for {
 		select {
