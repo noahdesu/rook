@@ -18,11 +18,14 @@ limitations under the License.
 package discover
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
 	"reflect"
+	"strings"
 	"syscall"
 	"time"
 
@@ -47,6 +50,7 @@ var (
 	lastDevice      string
 	cmName          string
 	cm              *v1.ConfigMap
+	udevEventPeriod = time.Duration(2) * time.Second
 )
 
 func Run(context *clusterd.Context, probeInterval time.Duration) error {
@@ -64,6 +68,10 @@ func Run(context *clusterd.Context, probeInterval time.Duration) error {
 		logger.Infof("failed to update device configmap: %v", err)
 		return err
 	}
+
+	udevEvents := make(chan string)
+	go udevBlockMonitor(udevEvents, udevEventPeriod)
+
 	for {
 		select {
 		case <-sigc:
@@ -71,7 +79,90 @@ func Run(context *clusterd.Context, probeInterval time.Duration) error {
 			return nil
 		case <-time.After(probeInterval):
 			updateDeviceCM(context)
+		case _, ok := <-udevEvents:
+			if ok {
+				logger.Info("trigger probe from udev event")
+				updateDeviceCM(context)
+			} else {
+				logger.Warningf("disabling udev monitoring")
+				udevEvents = nil
+			}
 		}
+	}
+}
+
+// Scans `udevadm monitor` output for block sub-system events. Each line of
+// output matching a set of substrings is sent to the provided channel.
+func rawUdevBlockMonitor(c chan string, substrs []string) {
+	defer close(c)
+
+	// stdbuf -oL performs line bufferred output
+	cmd := exec.Command("stdbuf", "-oL", "udevadm", "monitor", "-u", "-k", "-s", "block")
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		logger.Warningf("Cannot open udevadm stdout: %v", err)
+		return
+	}
+
+	err = cmd.Start()
+	if err != nil {
+		logger.Warningf("Cannot start udevadm monitoring: %v", err)
+		return
+	}
+
+	// substring matching normalization
+	for i := range substrs {
+		substrs[i] = strings.ToLower(substrs[i])
+	}
+
+	scanner := bufio.NewScanner(stdout)
+	for scanner.Scan() {
+		text := scanner.Text()
+		logger.Debugf("udevadm monitor: %s", text)
+		text = strings.ToLower(text)
+		for _, substr := range substrs {
+			if strings.Contains(text, substr) {
+				logger.Infof("udevadm monitor: matched event: %s", text)
+				c <- text
+				break
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		logger.Warningf("udevadm monitor scanner error: %v", err)
+	}
+
+	logger.Info("udevadm monitor finished")
+}
+
+// Monitors udev for block device changes, and collapses these events such that
+// only one event is emitted per period in order to deal with flapping.
+func udevBlockMonitor(c chan string, period time.Duration) {
+	defer close(c)
+
+	events := make(chan string)
+	go rawUdevBlockMonitor(events, []string{"add", "remove"})
+
+	for {
+		event, ok := <-events
+		if !ok {
+			return
+		}
+		timeout := time.NewTimer(period)
+		for {
+			select {
+			case <-timeout.C:
+				break
+			case _, ok := <-events:
+				if !ok {
+					return
+				}
+				continue
+			}
+			break
+		}
+		c <- event
 	}
 }
 
