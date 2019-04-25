@@ -25,6 +25,7 @@ import (
 	rookcephv1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1"
 	"github.com/rook/rook/pkg/operator/ceph/config/keyring"
 	opspec "github.com/rook/rook/pkg/operator/ceph/spec"
+	cephver "github.com/rook/rook/pkg/operator/ceph/version"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	rookversion "github.com/rook/rook/pkg/version"
 	apps "k8s.io/api/apps/v1"
@@ -39,21 +40,36 @@ func (c *Cluster) makeDeployment(mgrConfig *mgrConfig) *apps.Deployment {
 			Labels: c.getPodLabels(mgrConfig.DaemonID),
 		},
 		Spec: v1.PodSpec{
-			InitContainers: []v1.Container{
-				c.makeSetServerAddrInitContainer(mgrConfig, "dashboard"),
-				c.makeSetServerAddrInitContainer(mgrConfig, "prometheus"),
-			},
+			InitContainers: []v1.Container{},
 			Containers: []v1.Container{
 				c.makeMgrDaemonContainer(mgrConfig),
 			},
 			ServiceAccountName: serviceAccountName,
 			RestartPolicy:      v1.RestartPolicyAlways,
-			Volumes: append(
-				opspec.DaemonVolumes(mgrConfig.DataPathMap, mgrConfig.ResourceName),
-				keyring.Volume().Admin(), // ceph config set commands want admin keyring
-			),
-			HostNetwork: c.HostNetwork,
+			Volumes:            opspec.DaemonVolumes(mgrConfig.DataPathMap, mgrConfig.ResourceName),
+			HostNetwork:        c.HostNetwork,
 		},
+	}
+	needHttpBindFix := true
+	// if luminous and >= 12.2.12
+	if (c.clusterInfo.CephVersion.IsLuminous() &&
+		c.clusterInfo.CephVersion.IsAtLeast(cephver.CephVersion{Major: 12, Minor: 2, Extra: 12})) ||
+		// if mimic and >= 13.2.6
+		(c.clusterInfo.CephVersion.IsMimic() &&
+			c.clusterInfo.CephVersion.IsAtLeast(cephver.CephVersion{Major: 13, Minor: 2, Extra: 6})) ||
+		// if >= 14.1.1
+		c.clusterInfo.CephVersion.IsAtLeast(cephver.CephVersion{Major: 14, Minor: 1, Extra: 1}) {
+		// then we do not need the fix
+		needHttpBindFix = false
+	}
+	if needHttpBindFix {
+		podSpec.Spec.InitContainers = []v1.Container{
+			c.makeSetServerAddrInitContainer(mgrConfig, "dashboard"),
+			c.makeSetServerAddrInitContainer(mgrConfig, "prometheus"),
+		}
+		// ceph config set commands want admin keyring
+		podSpec.Spec.Volumes = append(podSpec.Spec.Volumes,
+			keyring.Volume().Admin())
 	}
 	if c.HostNetwork {
 		podSpec.Spec.DNSPolicy = v1.DNSClusterFirstWithHostNet
@@ -124,6 +140,7 @@ func (c *Cluster) makeCopyKeyringInitContainer(mgrConfig *mgrConfig) v1.Containe
 }
 
 func (c *Cluster) makeSetServerAddrInitContainer(mgrConfig *mgrConfig, mgrModule string) v1.Container {
+	logger.Infof("makeSetServerAdd blah blah blah")
 	// Commands produced for various Ceph major versions (differences highlighted)
 	//  L: config-key set       mgr/<mod>/server_addr $(ROOK_CEPH_<MOD>_SERVER_ADDR)
 	//  M: config     set mgr.a mgr/<mod>/server_addr $(ROOK_CEPH_<MOD>_SERVER_ADDR)
