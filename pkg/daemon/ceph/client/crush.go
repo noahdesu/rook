@@ -128,7 +128,7 @@ type CrushFindResult struct {
 func GetCrushMap(context *clusterd.Context, clusterName string) (CrushMap, error) {
 	var c CrushMap
 	args := []string{"osd", "crush", "dump"}
-	buf, err := ExecuteCephCommand(context, clusterName, args)
+	buf, err := NewCephCommand(context, clusterName, args).Run()
 	if err != nil {
 		return c, fmt.Errorf("failed to get crush map. %v", err)
 	}
@@ -143,7 +143,7 @@ func GetCrushMap(context *clusterd.Context, clusterName string) (CrushMap, error
 
 func SetCrushMap(context *clusterd.Context, clusterName, compiledMap string) (string, error) {
 	args := []string{"osd", "setcrushmap", "-i", compiledMap}
-	buf, err := ExecuteCephCommand(context, clusterName, args)
+	buf, err := NewCephCommand(context, clusterName, args).Run()
 	if err != nil {
 		return string(buf), fmt.Errorf("failed to set compiled crushmap. %v", err)
 	}
@@ -165,14 +165,14 @@ func SetCrushTunables(context *clusterd.Context, clusterName, profile string) (s
 
 func CrushReweight(context *clusterd.Context, clusterName string, id int, weight float64) (string, error) {
 	args := []string{"osd", "crush", "reweight", fmt.Sprintf("osd.%d", id), fmt.Sprintf("%.1f", weight)}
-	buf, err := ExecuteCephCommand(context, clusterName, args)
+	buf, err := NewCephCommand(context, clusterName, args).Run()
 
 	return string(buf), err
 }
 
 func CrushRemove(context *clusterd.Context, clusterName, name string) (string, error) {
 	args := []string{"osd", "crush", "rm", name}
-	buf, err := ExecuteCephCommand(context, clusterName, args)
+	buf, err := NewCephCommand(context, clusterName, args).Run()
 	if err != nil {
 		return "", fmt.Errorf("failed to crush rm: %+v, %s", err, string(buf))
 	}
@@ -182,7 +182,7 @@ func CrushRemove(context *clusterd.Context, clusterName, name string) (string, e
 
 func FindOSDInCrushMap(context *clusterd.Context, clusterName string, osdID int) (*CrushFindResult, error) {
 	args := []string{"osd", "find", strconv.Itoa(osdID)}
-	buf, err := ExecuteCephCommand(context, clusterName, args)
+	buf, err := NewCephCommand(context, clusterName, args).Run()
 	if err != nil {
 		return nil, fmt.Errorf("failed to find osd.%d in crush map: %+v, %s", osdID, err, string(buf))
 	}

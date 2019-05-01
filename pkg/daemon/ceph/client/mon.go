@@ -86,7 +86,7 @@ type MonTimeSkewStatus struct {
 
 func GetMonTimeStatus(context *clusterd.Context, clusterName string) (*MonTimeStatus, error) {
 	args := []string{"time-sync-status"}
-	buf, err := ExecuteCephCommand(context, clusterName, args)
+	buf, err := NewCephCommand(context, clusterName, args).Run()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get time sync status: %+v", err)
 	}

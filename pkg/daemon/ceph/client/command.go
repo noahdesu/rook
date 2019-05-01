@@ -141,11 +141,6 @@ func (c *CephToolCommand) Run() ([]byte, error) {
 	}
 }
 
-// ExecuteCephCommand executes the 'ceph' command
-func ExecuteCephCommand(context *clusterd.Context, clusterName string, args []string) ([]byte, error) {
-	return NewCephCommand(context, clusterName, args).Run()
-}
-
 // ExecuteRBDCommandWithTimeout executes the 'rbd' command with a timeout of 1 minute
 func ExecuteRBDCommandWithTimeout(context *clusterd.Context, clusterName string, args []string) (string, error) {
 	output, err := context.Executor.ExecuteCommandWithTimeout(false, cmdExecuteTimeout, "", RBDTool, args...)

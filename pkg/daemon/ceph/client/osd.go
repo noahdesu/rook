@@ -93,7 +93,7 @@ func (dump *OSDDump) StatusByID(id int64) (int64, int64, error) {
 
 func GetOSDUsage(context *clusterd.Context, clusterName string) (*OSDUsage, error) {
 	args := []string{"osd", "df"}
-	buf, err := ExecuteCephCommand(context, clusterName, args)
+	buf, err := NewCephCommand(context, clusterName, args).Run()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get osd df: %+v", err)
 	}
@@ -108,7 +108,7 @@ func GetOSDUsage(context *clusterd.Context, clusterName string) (*OSDUsage, erro
 
 func GetOSDPerfStats(context *clusterd.Context, clusterName string) (*OSDPerfStats, error) {
 	args := []string{"osd", "perf"}
-	buf, err := ExecuteCephCommand(context, clusterName, args)
+	buf, err := NewCephCommand(context, clusterName, args).Run()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get osd perf: %+v", err)
 	}
@@ -140,13 +140,13 @@ func GetOSDDump(context *clusterd.Context, clusterName string) (*OSDDump, error)
 
 func OSDOut(context *clusterd.Context, clusterName string, osdID int) (string, error) {
 	args := []string{"osd", "out", strconv.Itoa(osdID)}
-	buf, err := ExecuteCephCommand(context, clusterName, args)
+	buf, err := NewCephCommand(context, clusterName, args).Run()
 	return string(buf), err
 }
 
 func OSDRemove(context *clusterd.Context, clusterName string, osdID int) (string, error) {
 	args := []string{"osd", "rm", strconv.Itoa(osdID)}
-	buf, err := ExecuteCephCommand(context, clusterName, args)
+	buf, err := NewCephCommand(context, clusterName, args).Run()
 	return string(buf), err
 }
 
