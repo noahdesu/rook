@@ -41,7 +41,9 @@ type CephBlockImage struct {
 
 func ListImages(context *clusterd.Context, clusterName, poolName string) ([]CephBlockImage, error) {
 	args := []string{"ls", "-l", poolName}
-	buf, err := NewRBDCommand(context, clusterName, args, false).Run()
+	cmd := NewRBDCommand(context, clusterName, args)
+	cmd.JsonOutput = true
+	buf, err := cmd.Run()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list images for pool %s: %+v", poolName, err)
 	}
@@ -86,9 +88,7 @@ func CreateImage(context *clusterd.Context, clusterName, name, poolName, dataPoo
 		args = append(args, fmt.Sprintf("--data-pool=%s", dataPoolName))
 	}
 
-	cmd := NewRBDCommand(context, clusterName, args, false)
-	cmd.JsonOutput = false
-	buf, err := cmd.Run()
+	buf, err := NewRBDCommand(context, clusterName, args).Run()
 	if err != nil {
 		cmdErr, ok := err.(*exec.CommandError)
 		if ok && cmdErr.ExitStatus() == int(syscall.EEXIST) {
@@ -106,9 +106,7 @@ func CreateImage(context *clusterd.Context, clusterName, name, poolName, dataPoo
 func DeleteImage(context *clusterd.Context, clusterName, name, poolName string) error {
 	imageSpec := getImageSpec(name, poolName)
 	args := []string{"rm", imageSpec}
-	cmd := NewRBDCommand(context, clusterName, args, false)
-	cmd.JsonOutput = false
-	buf, err := cmd.Run()
+	buf, err := NewRBDCommand(context, clusterName, args).Run()
 	if err != nil {
 		return fmt.Errorf("failed to delete image %s in pool %s: %+v. output: %s",
 			name, poolName, err, string(buf))

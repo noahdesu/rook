@@ -104,9 +104,9 @@ func NewCephCommand(context *clusterd.Context, clusterName string, args []string
 	return newCephToolCommand(CephTool, context, clusterName, args, debug)
 }
 
-func NewRBDCommand(context *clusterd.Context, clusterName string, args []string, debug bool) *CephToolCommand {
-	cmd := newCephToolCommand(RBDTool, context, clusterName, args, debug)
-	// JsonOutput = false ??????????
+func NewRBDCommand(context *clusterd.Context, clusterName string, args []string) *CephToolCommand {
+	cmd := newCephToolCommand(RBDTool, context, clusterName, args, false)
+	cmd.JsonOutput = false
 	cmd.OutputFile = false
 	return cmd
 }
