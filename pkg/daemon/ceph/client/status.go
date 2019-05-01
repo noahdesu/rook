@@ -125,7 +125,7 @@ type PgStateEntry struct {
 
 func Status(context *clusterd.Context, clusterName string, debug bool) (CephStatus, error) {
 	args := []string{"status"}
-	buf, err := ExecuteCephCommandDebug(context, clusterName, debug, args)
+	buf, err := NewCephCommand(context, clusterName, args, debug).Run()
 	if err != nil {
 		return CephStatus{}, fmt.Errorf("failed to get status: %+v", err)
 	}

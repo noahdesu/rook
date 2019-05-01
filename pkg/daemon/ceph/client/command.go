@@ -78,19 +78,36 @@ func FinalizeCephCommandArgs(command string, args []string, configDir, clusterNa
 	return command, append(args, configArgs...)
 }
 
-// ExecuteCephCommandDebugLog executes the 'ceph' command with 'debug' logs instead of 'info' logs
-func ExecuteCephCommandDebugLog(context *clusterd.Context, clusterName string, args []string) ([]byte, error) {
-	return executeCephCommandWithOutputFile(context, clusterName, true, args)
+type CephToolCommand struct {
+	context     *clusterd.Context
+	tool        string
+	clusterName string
+	args        []string
+	debug       bool
+}
+
+func NewCephCommand(context *clusterd.Context, clusterName string, args []string, debug bool) *CephToolCommand {
+	return &CephToolCommand{
+		context:     context,
+		tool:        CephTool,
+		clusterName: clusterName,
+		args:        args,
+		debug:       debug,
+	}
+}
+
+// Run
+// RunDebug
+// RunTimeout
+func (c *CephToolCommand) Run() ([]byte, error) {
+	command, args := FinalizeCephCommandArgs(c.tool, c.args, c.context.ConfigDir, c.clusterName)
+	args = append(args, "--format", "json")
+	return executeCommandWithOutputFile(c.context, c.debug, command, args)
 }
 
 // ExecuteCephCommand executes the 'ceph' command
 func ExecuteCephCommand(context *clusterd.Context, clusterName string, args []string) ([]byte, error) {
-	return executeCephCommandWithOutputFile(context, clusterName, false, args)
-}
-
-// ExecuteCephCommandDebug executes the 'ceph' command with debug output
-func ExecuteCephCommandDebug(context *clusterd.Context, clusterName string, debug bool, args []string) ([]byte, error) {
-	return executeCephCommandWithOutputFile(context, clusterName, debug, args)
+	return NewCephCommand(context, clusterName, args, false).Run()
 }
 
 // ExecuteCephCommandPlain executes the 'ceph' command and returns stdout in PLAIN format instead of JSON
@@ -106,12 +123,6 @@ func ExecuteCephCommandPlainNoOutputFile(context *clusterd.Context, clusterName 
 	command, args := FinalizeCephCommandArgs(CephTool, args, context.ConfigDir, clusterName)
 	args = append(args, "--format", "plain")
 	return executeCommand(context, command, args)
-}
-
-func executeCephCommandWithOutputFile(context *clusterd.Context, clusterName string, debug bool, args []string) ([]byte, error) {
-	command, args := FinalizeCephCommandArgs(CephTool, args, context.ConfigDir, clusterName)
-	args = append(args, "--format", "json")
-	return executeCommandWithOutputFile(context, debug, command, args)
 }
 
 // ExecuteRBDCommand executes the 'rbd' command
