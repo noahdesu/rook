@@ -106,6 +106,7 @@ func NewCephCommand(context *clusterd.Context, clusterName string, args []string
 
 func NewRBDCommand(context *clusterd.Context, clusterName string, args []string, debug bool) *CephToolCommand {
 	cmd := newCephToolCommand(RBDTool, context, clusterName, args, debug)
+	// JsonOutput = false ??????????
 	cmd.OutputFile = false
 	return cmd
 }
@@ -125,9 +126,18 @@ func (c *CephToolCommand) Run() ([]byte, error) {
 		}
 	}
 	if c.OutputFile {
-		return executeCommandWithOutputFile(c.context, c.debug, command, args)
+		if command == Kubectl {
+			// Kubectl commands targeting the toolbox container generate a temp
+			// file in the wrong place, so we will instead capture the output
+			// from stdout for the tests
+			output, err := c.context.Executor.ExecuteCommandWithOutput(c.debug, "", command, args...)
+			return []byte(output), err
+		}
+		output, err := c.context.Executor.ExecuteCommandWithOutputFile(c.debug, "", command, "--out-file", args...)
+		return []byte(output), err
 	} else {
-		return executeCommand(c.context, command, args)
+		output, err := c.context.Executor.ExecuteCommandWithOutput(c.debug, "", command, args...)
+		return []byte(output), err
 	}
 }
 
@@ -140,20 +150,6 @@ func ExecuteCephCommand(context *clusterd.Context, clusterName string, args []st
 func ExecuteRBDCommandWithTimeout(context *clusterd.Context, clusterName string, args []string) (string, error) {
 	output, err := context.Executor.ExecuteCommandWithTimeout(false, cmdExecuteTimeout, "", RBDTool, args...)
 	return output, err
-}
-
-func executeCommand(context *clusterd.Context, command string, args []string) ([]byte, error) {
-	output, err := context.Executor.ExecuteCommandWithOutput(false, "", command, args...)
-	return []byte(output), err
-}
-
-func executeCommandWithOutputFile(context *clusterd.Context, debug bool, command string, args []string) ([]byte, error) {
-	if command == Kubectl {
-		// Kubectl commands targeting the toolbox container generate a temp file in the wrong place, so we will instead capture the output from stdout for the tests
-		return executeCommand(context, command, args)
-	}
-	output, err := context.Executor.ExecuteCommandWithOutputFile(debug, "", command, "--out-file", args...)
-	return []byte(output), err
 }
 
 func ExecuteCephCommandWithRetry(
