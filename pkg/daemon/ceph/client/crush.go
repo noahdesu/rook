@@ -153,7 +153,9 @@ func SetCrushMap(context *clusterd.Context, clusterName, compiledMap string) (st
 
 func SetCrushTunables(context *clusterd.Context, clusterName, profile string) (string, error) {
 	args := []string{"osd", "crush", "tunables", profile}
-	buf, err := ExecuteCephCommandPlain(context, clusterName, args)
+	cmd := NewCephCommand(context, clusterName, args, false)
+	cmd.JsonOutput = false
+	buf, err := cmd.Run()
 	if err != nil {
 		return "", fmt.Errorf("%+v, %s", err, string(buf))
 	}

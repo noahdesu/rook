@@ -84,6 +84,7 @@ type CephToolCommand struct {
 	clusterName string
 	args        []string
 	debug       bool
+	JsonOutput  bool
 }
 
 func NewCephCommand(context *clusterd.Context, clusterName string, args []string, debug bool) *CephToolCommand {
@@ -93,6 +94,7 @@ func NewCephCommand(context *clusterd.Context, clusterName string, args []string
 		clusterName: clusterName,
 		args:        args,
 		debug:       debug,
+		JsonOutput:  true,
 	}
 }
 
@@ -101,20 +103,17 @@ func NewCephCommand(context *clusterd.Context, clusterName string, args []string
 // RunTimeout
 func (c *CephToolCommand) Run() ([]byte, error) {
 	command, args := FinalizeCephCommandArgs(c.tool, c.args, c.context.ConfigDir, c.clusterName)
-	args = append(args, "--format", "json")
+	if c.JsonOutput {
+		args = append(args, "--format", "json")
+	} else {
+		args = append(args, "--format", "plain")
+	}
 	return executeCommandWithOutputFile(c.context, c.debug, command, args)
 }
 
 // ExecuteCephCommand executes the 'ceph' command
 func ExecuteCephCommand(context *clusterd.Context, clusterName string, args []string) ([]byte, error) {
 	return NewCephCommand(context, clusterName, args, false).Run()
-}
-
-// ExecuteCephCommandPlain executes the 'ceph' command and returns stdout in PLAIN format instead of JSON
-func ExecuteCephCommandPlain(context *clusterd.Context, clusterName string, args []string) ([]byte, error) {
-	command, args := FinalizeCephCommandArgs(CephTool, args, context.ConfigDir, clusterName)
-	args = append(args, "--format", "plain")
-	return executeCommandWithOutputFile(context, false, command, args)
 }
 
 // ExecuteCephCommandPlainNoOutputFile executes the 'ceph' command and returns stdout in PLAIN format instead of JSON
