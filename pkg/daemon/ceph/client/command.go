@@ -85,56 +85,55 @@ type CephToolCommand struct {
 	args        []string
 	debug       bool
 	JsonOutput  bool
+	OutputFile  bool
 }
 
-func NewCephCommand(context *clusterd.Context, clusterName string, args []string, debug bool) *CephToolCommand {
+func newCephToolCommand(tool string, context *clusterd.Context, clusterName string, args []string, debug bool) *CephToolCommand {
 	return &CephToolCommand{
 		context:     context,
-		tool:        CephTool,
+		tool:        tool,
 		clusterName: clusterName,
 		args:        args,
 		debug:       debug,
 		JsonOutput:  true,
+		OutputFile:  true,
 	}
+}
+
+func NewCephCommand(context *clusterd.Context, clusterName string, args []string, debug bool) *CephToolCommand {
+	return newCephToolCommand(CephTool, context, clusterName, args, debug)
+}
+
+func NewRBDCommand(context *clusterd.Context, clusterName string, args []string, debug bool) *CephToolCommand {
+	cmd := newCephToolCommand(RBDTool, context, clusterName, args, debug)
+	cmd.OutputFile = false
+	return cmd
 }
 
 // Run
 // RunDebug
 // RunTimeout
+// Check final diff to see what the usage stats are
 func (c *CephToolCommand) Run() ([]byte, error) {
 	command, args := FinalizeCephCommandArgs(c.tool, c.args, c.context.ConfigDir, c.clusterName)
 	if c.JsonOutput {
 		args = append(args, "--format", "json")
 	} else {
-		args = append(args, "--format", "plain")
+		// the `rbd` tool doesn't use special flag for plain format
+		if c.tool != RBDTool {
+			args = append(args, "--format", "plain")
+		}
 	}
-	return executeCommandWithOutputFile(c.context, c.debug, command, args)
+	if c.OutputFile {
+		return executeCommandWithOutputFile(c.context, c.debug, command, args)
+	} else {
+		return executeCommand(c.context, command, args)
+	}
 }
 
 // ExecuteCephCommand executes the 'ceph' command
 func ExecuteCephCommand(context *clusterd.Context, clusterName string, args []string) ([]byte, error) {
 	return NewCephCommand(context, clusterName, args, false).Run()
-}
-
-// ExecuteCephCommandPlainNoOutputFile executes the 'ceph' command and returns stdout in PLAIN format instead of JSON
-// with no output file, suppresses '--out-file' option
-func ExecuteCephCommandPlainNoOutputFile(context *clusterd.Context, clusterName string, args []string) ([]byte, error) {
-	command, args := FinalizeCephCommandArgs(CephTool, args, context.ConfigDir, clusterName)
-	args = append(args, "--format", "plain")
-	return executeCommand(context, command, args)
-}
-
-// ExecuteRBDCommand executes the 'rbd' command
-func ExecuteRBDCommand(context *clusterd.Context, clusterName string, args []string) ([]byte, error) {
-	command, args := FinalizeCephCommandArgs(RBDTool, args, context.ConfigDir, clusterName)
-	args = append(args, "--format", "json")
-	return executeCommand(context, command, args)
-}
-
-// ExecuteRBDCommandNoFormat executes the 'rbd' command and returns stdout in PLAIN format
-func ExecuteRBDCommandNoFormat(context *clusterd.Context, clusterName string, args []string) ([]byte, error) {
-	command, args := FinalizeCephCommandArgs(RBDTool, args, context.ConfigDir, clusterName)
-	return executeCommand(context, command, args)
 }
 
 // ExecuteRBDCommandWithTimeout executes the 'rbd' command with a timeout of 1 minute

@@ -38,7 +38,11 @@ func AuthAdd(context *clusterd.Context, clusterName, name, keyringPath string, c
 // user will be written to the given keyring path.
 func AuthGetOrCreate(context *clusterd.Context, clusterName, name, keyringPath string, caps []string) error {
 	args := append([]string{"auth", "get-or-create", name, "-o", keyringPath}, caps...)
-	_, err := ExecuteCephCommandPlainNoOutputFile(context, clusterName, args)
+
+	cmd := NewCephCommand(context, clusterName, args, false)
+	cmd.JsonOutput = false
+	cmd.OutputFile = false
+	_, err := cmd.Run()
 	if err != nil {
 		return fmt.Errorf("failed to auth get-or-create for %s: %+v", name, err)
 	}
