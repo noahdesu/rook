@@ -83,7 +83,7 @@ type CephToolCommand struct {
 	tool        string
 	clusterName string
 	args        []string
-	debug       bool
+	Debug       bool
 	JsonOutput  bool
 	OutputFile  bool
 }
@@ -94,14 +94,14 @@ func newCephToolCommand(tool string, context *clusterd.Context, clusterName stri
 		tool:        tool,
 		clusterName: clusterName,
 		args:        args,
-		debug:       debug,
+		Debug:       debug,
 		JsonOutput:  true,
 		OutputFile:  true,
 	}
 }
 
-func NewCephCommand(context *clusterd.Context, clusterName string, args []string, debug bool) *CephToolCommand {
-	return newCephToolCommand(CephTool, context, clusterName, args, debug)
+func NewCephCommand(context *clusterd.Context, clusterName string, args []string) *CephToolCommand {
+	return newCephToolCommand(CephTool, context, clusterName, args, false)
 }
 
 func NewRBDCommand(context *clusterd.Context, clusterName string, args []string) *CephToolCommand {
@@ -130,20 +130,20 @@ func (c *CephToolCommand) Run() ([]byte, error) {
 			// Kubectl commands targeting the toolbox container generate a temp
 			// file in the wrong place, so we will instead capture the output
 			// from stdout for the tests
-			output, err := c.context.Executor.ExecuteCommandWithOutput(c.debug, "", command, args...)
+			output, err := c.context.Executor.ExecuteCommandWithOutput(c.Debug, "", command, args...)
 			return []byte(output), err
 		}
-		output, err := c.context.Executor.ExecuteCommandWithOutputFile(c.debug, "", command, "--out-file", args...)
+		output, err := c.context.Executor.ExecuteCommandWithOutputFile(c.Debug, "", command, "--out-file", args...)
 		return []byte(output), err
 	} else {
-		output, err := c.context.Executor.ExecuteCommandWithOutput(c.debug, "", command, args...)
+		output, err := c.context.Executor.ExecuteCommandWithOutput(c.Debug, "", command, args...)
 		return []byte(output), err
 	}
 }
 
 // ExecuteCephCommand executes the 'ceph' command
 func ExecuteCephCommand(context *clusterd.Context, clusterName string, args []string) ([]byte, error) {
-	return NewCephCommand(context, clusterName, args, false).Run()
+	return NewCephCommand(context, clusterName, args).Run()
 }
 
 // ExecuteRBDCommandWithTimeout executes the 'rbd' command with a timeout of 1 minute

@@ -123,7 +123,9 @@ func GetOSDPerfStats(context *clusterd.Context, clusterName string) (*OSDPerfSta
 
 func GetOSDDump(context *clusterd.Context, clusterName string) (*OSDDump, error) {
 	args := []string{"osd", "dump"}
-	buf, err := NewCephCommand(context, clusterName, args, true).Run()
+	cmd := NewCephCommand(context, clusterName, args)
+	cmd.Debug = true
+	buf, err := cmd.Run()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get osd dump: %+v", err)
 	}

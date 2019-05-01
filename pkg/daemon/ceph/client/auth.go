@@ -39,7 +39,7 @@ func AuthAdd(context *clusterd.Context, clusterName, name, keyringPath string, c
 func AuthGetOrCreate(context *clusterd.Context, clusterName, name, keyringPath string, caps []string) error {
 	args := append([]string{"auth", "get-or-create", name, "-o", keyringPath}, caps...)
 
-	cmd := NewCephCommand(context, clusterName, args, false)
+	cmd := NewCephCommand(context, clusterName, args)
 	cmd.JsonOutput = false
 	cmd.OutputFile = false
 	_, err := cmd.Run()

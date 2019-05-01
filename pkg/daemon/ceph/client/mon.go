@@ -52,7 +52,9 @@ type MonMapEntry struct {
 // GetMonStatus calls mon_status mon_command
 func GetMonStatus(context *clusterd.Context, clusterName string, debug bool) (MonStatusResponse, error) {
 	args := []string{"mon_status"}
-	buf, err := NewCephCommand(context, clusterName, args, debug).Run()
+	cmd := NewCephCommand(context, clusterName, args)
+	cmd.Debug = debug
+	buf, err := cmd.Run()
 	if err != nil {
 		return MonStatusResponse{}, fmt.Errorf("mon status failed. %+v", err)
 	}

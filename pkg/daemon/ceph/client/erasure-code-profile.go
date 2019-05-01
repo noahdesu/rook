@@ -98,7 +98,7 @@ func CreateErasureCodeProfile(context *clusterd.Context, clusterName string, con
 func DeleteErasureCodeProfile(context *clusterd.Context, clusterName string, erasureCodeProfile string) error {
 	args := []string{"osd", "erasure-code-profile", "rm", erasureCodeProfile}
 
-	cmd := NewCephCommand(context, clusterName, args, false)
+	cmd := NewCephCommand(context, clusterName, args)
 	cmd.JsonOutput = false
 	buf, err := cmd.Run()
 	if err != nil {
