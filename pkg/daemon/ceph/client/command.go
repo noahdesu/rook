@@ -83,6 +83,7 @@ type CephToolCommand struct {
 	tool        string
 	clusterName string
 	args        []string
+	timeout     time.Duration
 	Debug       bool
 	JsonOutput  bool
 	OutputFile  bool
@@ -111,11 +112,7 @@ func NewRBDCommand(context *clusterd.Context, clusterName string, args []string)
 	return cmd
 }
 
-// Run
-// RunDebug
-// RunTimeout
-// Check final diff to see what the usage stats are
-func (c *CephToolCommand) Run() ([]byte, error) {
+func (c *CephToolCommand) run() ([]byte, error) {
 	command, args := FinalizeCephCommandArgs(c.tool, c.args, c.context.ConfigDir, c.clusterName)
 	if c.JsonOutput {
 		args = append(args, "--format", "json")
@@ -125,23 +122,52 @@ func (c *CephToolCommand) Run() ([]byte, error) {
 			args = append(args, "--format", "plain")
 		}
 	}
+
+	var output string
+	var err error
+
 	if c.OutputFile {
 		if command == Kubectl {
 			// Kubectl commands targeting the toolbox container generate a temp
 			// file in the wrong place, so we will instead capture the output
 			// from stdout for the tests
-			output, err := c.context.Executor.ExecuteCommandWithOutput(c.Debug, "", command, args...)
-			return []byte(output), err
+			if c.timeout == 0 {
+				output, err = c.context.Executor.ExecuteCommandWithOutput(c.Debug, "", command, args...)
+			} else {
+				output, err = c.context.Executor.ExecuteCommandWithTimeout(c.Debug, c.timeout, "", command, args...)
+			}
+		} else {
+			if c.timeout == 0 {
+				output, err = c.context.Executor.ExecuteCommandWithOutputFile(c.Debug, "", command, "--out-file", args...)
+			} else {
+				output, err = c.context.Executor.ExecuteCommandWithOutputFileTimeout(c.Debug, c.timeout, "", command, "--out-file", args...)
+			}
 		}
-		output, err := c.context.Executor.ExecuteCommandWithOutputFile(c.Debug, "", command, "--out-file", args...)
-		return []byte(output), err
 	} else {
-		output, err := c.context.Executor.ExecuteCommandWithOutput(c.Debug, "", command, args...)
-		return []byte(output), err
+		if c.timeout == 0 {
+			output, err = c.context.Executor.ExecuteCommandWithOutput(c.Debug, "", command, args...)
+		} else {
+			output, err = c.context.Executor.ExecuteCommandWithTimeout(c.Debug, c.timeout, "", command, args...)
+		}
 	}
+
+	return []byte(output), err
 }
 
-// ExecuteRBDCommandWithTimeout executes the 'rbd' command with a timeout of 1 minute
+func (c *CephToolCommand) Run() ([]byte, error) {
+	c.timeout = 0
+	return c.run()
+}
+
+func (c *CephToolCommand) RunWithTimeout() ([]byte, error) {
+	c.timeout = cmdExecuteTimeout
+	return c.run()
+}
+
+// ExecuteRBDCommandWithTimeout executes the 'rbd' command with a timeout of 1
+// minute. This method is left as a special case in which the caller has fully
+// configured its arguments. It is future work to integrate this case into the
+// generalization.
 func ExecuteRBDCommandWithTimeout(context *clusterd.Context, clusterName string, args []string) (string, error) {
 	output, err := context.Executor.ExecuteCommandWithTimeout(false, cmdExecuteTimeout, "", RBDTool, args...)
 	return output, err
