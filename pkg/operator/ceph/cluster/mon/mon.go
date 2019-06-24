@@ -478,9 +478,12 @@ func (c *Cluster) assignMons(mons []*monConfig) error {
 		}
 
 		// note that we do not need to worry about a false negative here (i.e. a
-		// node that _would_ pass this check) due to the search landing in a
+		// node exists that _would_ pass this check) due to the search landing in a
 		// local minima because if a node had existed with a mon count of zero,
-		// it would have been chosen over a node with a positive mon count.
+		// scheduleMonitor would have chosen it over any node with a positive
+		// mon count.
+
+		// TODO: test this?
 		if nodeChoice.MonCount > 0 && !c.spec.Mon.AllowMultiplePerNode {
 			return fmt.Errorf("XXX no empty nodes available for mon placement")
 		}
