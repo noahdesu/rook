@@ -159,15 +159,9 @@ func (c *Cluster) checkHealth() error {
 		return nil
 	}
 
-	if !c.spec.Mon.AllowMultiplePerNode {
-		// check if there are more than two mons running on the same node, failover one mon in that case
-		done, err := c.checkMonsOnSameNode(desiredMonCount)
-		if done || err != nil {
-			return err
-		}
-	}
-
-	done, err := c.checkMonsOnValidNodes()
+	// find any mons that invalidate our placement policy and potentially
+	// reschedule them.
+	done, err := c.resolveInvalidMonitorPlacement(desiredMonCount)
 	if done || err != nil {
 		return err
 	}
@@ -189,6 +183,130 @@ func (c *Cluster) checkHealth() error {
 	}
 
 	return nil
+}
+
+func (c *Cluster) resolveInvalidMonitorPlacement(desiredMonCount int) (bool, error) {
+	nodeChoice, err := c.findInvalidMonitorPlacement(desiredMonCount)
+	if err != nil {
+		return true, fmt.Errorf("failed to find invalid mon placement %+v", err)
+	}
+
+	// no violation found
+	if nodeChoice == nil {
+		return false, nil
+	}
+
+	for name, nodeInfo := range c.mapping.Node {
+		if nodeInfo.Name == nodeChoice.Node.Name {
+			logger.Infof("XXX rebalance: rescheduling mon %s from node %s", name, nodeInfo.Name)
+			c.failMon(len(c.clusterInfo.Monitors), desiredMonCount, name)
+			return true, nil
+		} else {
+			logger.Warningf("XXX rebalance: no mon pod found on node %s", nodeChoice.Node.Name)
+		}
+	}
+
+	return false, nil
+}
+
+func (c *Cluster) findInvalidMonitorPlacement(desiredMonCount int) (*NodeUsage, error) {
+	nodeZones, err := c.getNodeMonUsage()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get node monitor usage. %+v", err)
+	}
+
+	// compute two helpful global flags:
+	//  - does an empty zone exist
+	//  - does an empty node exist
+	emptyZone := false
+	emptyNode := false
+	for zi := range nodeZones {
+		monFoundInZone := false
+		for ni := range nodeZones[zi] {
+			nodeUsage := &nodeZones[zi][ni]
+			if nodeUsage.MonCount > 0 {
+				monFoundInZone = true
+			} else if nodeUsage.MonValid {
+				// only consider valid nodes since this flag determines if a mon
+				// may be scheduled on to a new node.
+				emptyNode = true
+			}
+		}
+		if !monFoundInZone {
+			emptyZone = true
+		}
+	}
+
+	logger.Infof("XXX rebalance: desired mon count: %d empty zone found: %t empty node found: %t",
+		desiredMonCount, emptyZone, emptyNode)
+
+	for zi := range nodeZones {
+		zoneMonCount := 0
+		var nodeChoice *NodeUsage = nil
+
+		// for each node consider two cases: too many monitors are running on a
+		// node, or monitors are running on invalid nodes.
+		for ni := range nodeZones[zi] {
+			nodeUsage := &nodeZones[zi][ni]
+			zoneMonCount += nodeUsage.MonCount
+
+			// if this node has too many monitors, and an underused node exists,
+			// then consider moving the monitor
+			if nodeUsage.MonCount > 1 && !c.spec.Mon.AllowMultiplePerNode {
+				if emptyNode {
+					logger.Infof("XXX rebalance: chose overloaded node %s with %d mons",
+						nodeUsage.Node.Name, nodeUsage.MonCount)
+					nodeChoice = nodeUsage
+					break
+				}
+			}
+
+			// check for mons on invalid nodes. but reschedule pod only when it
+			// is invalid for reasons other than schedulability which should not
+			// affect pods that are already scheduled.
+			if nodeUsage.MonCount > 0 && !nodeUsage.MonValid {
+				valid, err := k8sutil.ValidNodeNoSched(*nodeUsage.Node,
+					cephv1.GetMonPlacement(c.spec.Placement))
+				if err != nil {
+					logger.Warningf("rebalance: failed to validate node %s %+v",
+						nodeUsage.Node.Name, err)
+				} else if !valid {
+					logger.Infof("XXX rebalance: chose invalid node %s",
+						nodeUsage.Node.Name)
+					nodeChoice = nodeUsage
+					break
+				}
+			}
+		}
+
+		// if we didn't already select a node with a monitor for rescheduling,
+		// then consider that a zone may be overloaded and can be rebalanced.
+		// this case occurs if the zone has more than 1 monitor, and some other
+		// zone exists without any monitors.
+		if nodeChoice == nil && zoneMonCount > 1 && emptyZone {
+			for ni := range nodeZones[zi] {
+				nodeUsage := &nodeZones[zi][ni]
+				if nodeUsage.MonCount > 0 {
+					// select the node with the most monitors assigned
+					if nodeChoice == nil || nodeUsage.MonCount > nodeChoice.MonCount {
+						nodeChoice = nodeUsage
+					}
+				}
+			}
+			if nodeChoice != nil {
+				logger.Infof("XXX rebalance: chose node %s from overloaded zone",
+					nodeChoice.Node.Name)
+			}
+		}
+
+		if nodeChoice != nil {
+			return nodeChoice, nil
+		}
+	}
+
+	logger.Infof("rebalance: no mon placement violations or fixes available")
+
+	return nil, nil
 }
 
 func (c *Cluster) checkMonsOnSameNode(desiredMonCount int) (bool, error) {
