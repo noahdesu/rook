@@ -207,7 +207,7 @@ func TestCheckHealthTwoMonsOneNode(t *testing.T) {
 	}
 
 	// initial health check should already see that there is more than one mon on one node (node0)
-	_, err := c.checkMonsOnSameNode(3)
+	_, err := c.resolveInvalidMonitorPlacement(3)
 	assert.Nil(t, err)
 	assert.Equal(t, "node0", c.mapping.Node["a"].Name)
 	assert.Equal(t, "node0", c.mapping.Node["b"].Name)
@@ -233,7 +233,7 @@ func TestCheckHealthTwoMonsOneNode(t *testing.T) {
 	n.Name = "node2"
 	clientset.CoreV1().Nodes().Create(n)
 
-	_, err = c.checkMonsOnSameNode(3)
+	_, err = c.resolveInvalidMonitorPlacement(3)
 	assert.Nil(t, err)
 
 	// check that mon c exists
@@ -255,7 +255,7 @@ func TestCheckHealthTwoMonsOneNode(t *testing.T) {
 
 	// enable different ceph mon map output
 	executorNextMons = true
-	_, err = c.checkMonsOnSameNode(3)
+	_, err = c.resolveInvalidMonitorPlacement(3)
 	assert.Nil(t, err)
 
 	// check that nothing has changed
@@ -322,15 +322,17 @@ func TestCheckMonsValid(t *testing.T) {
 		clientset.CoreV1().Nodes().Create(n)
 	}
 
-	_, err := c.checkMonsOnValidNodes()
+	_, err := c.resolveInvalidMonitorPlacement(3)
 	assert.Nil(t, err)
 	assert.Equal(t, "node0", c.mapping.Node["a"].Name)
 	assert.Equal(t, "node1", c.mapping.Node["b"].Name)
 
-	// set node1 unschedulable and check that mon2 gets failovered to be mon3 to node2
+	// set node0 to contain the not ready status condition, and check that mon.a
+	// is failovered to be mon.c on node2. note that validity here doesn't include the
+	// unscheduable flag (for mons already placed on a node).
 	node0, err := c.context.Clientset.CoreV1().Nodes().Get("node0", metav1.GetOptions{})
 	assert.Nil(t, err)
-	node0.Spec.Unschedulable = true
+	node0.Status.Conditions[0].Status = v1.ConditionFalse
 	_, err = c.context.Clientset.CoreV1().Nodes().Update(node0)
 	assert.Nil(t, err)
 
@@ -342,7 +344,7 @@ func TestCheckMonsValid(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
-	_, err = c.checkMonsOnValidNodes()
+	_, err = c.resolveInvalidMonitorPlacement(3)
 	assert.Nil(t, err)
 
 	assert.Len(t, c.mapping.Node, 2)

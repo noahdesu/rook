@@ -251,14 +251,14 @@ func (c *Cluster) findInvalidMonitorPlacement(desiredMonCount int) (*NodeUsage, 
 			zoneMonCount += nodeUsage.MonCount
 
 			// if this node has too many monitors, and an underused node exists,
-			// then consider moving the monitor
-			if nodeUsage.MonCount > 1 && !c.spec.Mon.AllowMultiplePerNode {
-				if emptyNode {
-					logger.Infof("XXX rebalance: chose overloaded node %s with %d mons",
-						nodeUsage.Node.Name, nodeUsage.MonCount)
-					nodeChoice = nodeUsage
-					break
-				}
+			// then consider moving the monitor. note that this check is
+			// independent of the setting `AllowMultiplePerNode` since we also
+			// want to avoid in general keeping multiple monitors on one node.
+			if nodeUsage.MonCount > 1 && emptyNode {
+				logger.Infof("XXX rebalance: chose overloaded node %s with %d mons",
+					nodeUsage.Node.Name, nodeUsage.MonCount)
+				nodeChoice = nodeUsage
+				break
 			}
 
 			// check for mons on invalid nodes. but reschedule pod only when it
@@ -307,54 +307,6 @@ func (c *Cluster) findInvalidMonitorPlacement(desiredMonCount int) (*NodeUsage, 
 	logger.Infof("rebalance: no mon placement violations or fixes available")
 
 	return nil, nil
-}
-
-func (c *Cluster) checkMonsOnSameNode(desiredMonCount int) (bool, error) {
-	nodesUsed := map[string]struct{}{}
-	for name, node := range c.mapping.Node {
-		// when the node is already in the list we have more than one mon on that node
-		if _, ok := nodesUsed[node.Name]; ok {
-			// get list of available nodes for mons
-			availableNodes, _, err := c.getAvailableMonNodes()
-			if err != nil {
-				return true, fmt.Errorf("failed to get available mon nodes. %+v", err)
-			}
-			// if there are enough nodes for one mon "that is too much" to be failovered,
-			// fail it over to an other node
-			if len(availableNodes) > 0 {
-				logger.Infof("rebalance: enough nodes available %d to failover mon %s", len(availableNodes), name)
-				c.failMon(len(c.clusterInfo.Monitors), desiredMonCount, name)
-			} else {
-				logger.Debugf("rebalance: not enough nodes available to failover mon %s", name)
-			}
-
-			// deal with one mon too much on a node at a time
-			return true, nil
-		}
-		nodesUsed[node.Name] = struct{}{}
-	}
-	return false, nil
-}
-
-func (c *Cluster) checkMonsOnValidNodes() (bool, error) {
-	for mon, nInfo := range c.mapping.Node {
-		// get node to use for validNode() func
-		node, err := c.context.Clientset.CoreV1().Nodes().Get(nInfo.Name, metav1.GetOptions{})
-		if err != nil {
-			return true, err
-		}
-		// check if node the mon is on is still valid
-		valid, err := k8sutil.ValidNode(*node, cephv1.GetMonPlacement(c.spec.Placement))
-		if err != nil {
-			logger.Warning("failed to validate node %s %v", node.Name, err)
-		} else if !valid {
-			logger.Warningf("node %s isn't valid anymore, failover mon %s", nInfo.Name, mon)
-			c.failoverMon(mon)
-			return true, nil
-		}
-		logger.Debugf("node %s with mon %s is still valid", nInfo.Name, mon)
-	}
-	return false, nil
 }
 
 // failMon compares the monCount against desiredMonCount

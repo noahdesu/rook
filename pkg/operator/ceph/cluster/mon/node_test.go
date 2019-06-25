@@ -412,8 +412,18 @@ func TestHostNetwork(t *testing.T) {
 
 	c.HostNetwork = true
 
-	nodes, err := c.getMonNodes()
+	nodes := []v1.Node{}
+	nodeZones, err := c.getNodeMonUsage()
 	assert.Nil(t, err)
+
+	for zi := range nodeZones {
+		for _, nodeUsage := range nodeZones[zi] {
+			if nodeUsage.MonCount == 0 || c.spec.Mon.AllowMultiplePerNode {
+				nodes = append(nodes, *nodeUsage.Node)
+			}
+		}
+	}
+
 	assert.Equal(t, 3, len(nodes))
 
 	monConfig := testGenMonConfig("c")
