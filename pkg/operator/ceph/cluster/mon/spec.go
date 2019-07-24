@@ -51,6 +51,66 @@ func (c *Cluster) getLabels(daemonName string) map[string]string {
 	return labels
 }
 
+// Build the headless service to manage network identity that is required by
+// statefulset. XXX it is not clear if we could use the existing monitor service
+// (non-headless) that is created in lieu of a headless service. XXX there is
+// already a mon/service.go file that would make more sense to house.
+func (c *Cluster) makeService(monConfig *monConfig) *v1.Service {
+	name := fmt.Sprintf("%s-headless", monConfig.ResourceName)
+	return &v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: c.Namespace,
+			Labels:    c.getLabels(monConfig.DaemonName),
+		},
+		Spec: v1.ServiceSpec{
+			ClusterIP: "None",
+			Selector:  c.getLabels(monConfig.DaemonName),
+		},
+	}
+}
+
+func (c *Cluster) makeStatefulSet(monConfig *monConfig, hostname string) *apps.StatefulSet {
+	mss := &apps.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      monConfig.ResourceName,
+			Namespace: c.Namespace,
+			Labels:    c.getLabels(monConfig.DaemonName),
+		},
+	}
+
+	k8sutil.AddRookVersionLabelToStatefulSet(mss)
+	cephv1.GetMonAnnotations(c.spec.Annotations).ApplyToObjectMeta(&mss.ObjectMeta)
+	opspec.AddCephVersionLabelToStatefulSet(c.clusterInfo.CephVersion, mss)
+	k8sutil.SetOwnerRef(&mss.ObjectMeta, &c.ownerRef)
+
+	serviceName := fmt.Sprintf("%s-headless", monConfig.ResourceName)
+	replicaCount := int32(1)
+
+	pod := c.makeMonPod(monConfig, hostname)
+	//pod.Spec.Volumes = []v1.Volume{}
+	//pod.Spec.InitContainers = []v1.Container{}
+	//pod.Spec.Containers[0].VolumeMounts = []v1.VolumeMount{}
+
+	mss.Spec = apps.StatefulSetSpec{
+		Replicas: &replicaCount,
+		// the selector here needs to match the labels of the pods in the spec.
+		// i'm assuming that _all_ the labels must match, so the "mon: x" will
+		// match the identiy of the particular mon.
+		Selector: &metav1.LabelSelector{
+			MatchLabels: c.getLabels(monConfig.DaemonName),
+		},
+		Template: v1.PodTemplateSpec{
+			ObjectMeta: pod.ObjectMeta,
+			Spec:       pod.Spec,
+		},
+		ServiceName: serviceName,
+		// Strategy
+	}
+
+	return mss
+}
+
 func (c *Cluster) makeDeployment(monConfig *monConfig, hostname string) *apps.Deployment {
 	d := &apps.Deployment{
 		ObjectMeta: metav1.ObjectMeta{

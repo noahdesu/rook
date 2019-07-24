@@ -30,7 +30,7 @@ spec:
   dataDirHostPath: /var/lib/rook
   # set the amount of mons to be started
   mon:
-    count: 3
+    count: 1
     allowMultiplePerNode: false
   # enable the ceph dashboard for viewing cluster status
   dashboard:

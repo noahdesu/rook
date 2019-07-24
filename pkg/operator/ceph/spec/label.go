@@ -76,3 +76,15 @@ func AddCephVersionLabelToJob(cephVersion version.CephVersion, j *batch.Job) {
 	}
 	addCephVersionLabel(cephVersion, j.Labels)
 }
+
+// AddCephVersionLabelToStatefulSet adds a label reporting the Ceph version which Rook has detected is
+// running in the StatefulSet's pods.
+func AddCephVersionLabelToStatefulSet(cephVersion version.CephVersion, s *apps.StatefulSet) {
+	if s == nil {
+		return
+	}
+	if s.Labels == nil {
+		s.Labels = map[string]string{}
+	}
+	addCephVersionLabel(cephVersion, s.Labels)
+}
