@@ -181,3 +181,15 @@ func AddRookVersionLabelToDeployment(d *v1.Deployment) {
 	}
 	addRookVersionLabel(d.Labels)
 }
+
+// AddRookVersionLabelToStatefulSet adds or updates a label reporting the Rook version which last
+// modified a statefulset.
+func AddRookVersionLabelToStatefulSet(sts *v1.StatefulSet) {
+	if sts == nil {
+		return
+	}
+	if sts.Labels == nil {
+		sts.Labels = map[string]string{}
+	}
+	addRookVersionLabel(sts.Labels)
+}
