@@ -337,3 +337,41 @@ func UpdateCephDeploymentAndWait(context *clusterd.Context, deployment *apps.Dep
 	_, err := k8sutil.UpdateDeploymentAndWait(context, deployment, namespace, callback)
 	return err
 }
+
+// UpdateCephDeploymentAndWait verifies a deployment can be stopped or continued
+func UpdateCephStatefulSetAndWait(
+	context *clusterd.Context,
+	sts *apps.StatefulSet,
+	namespace string,
+	daemonType string,
+	daemonName string,
+	cephVersion cephver.CephVersion,
+) error {
+	callback := func(action string) error {
+		logger.Infof("checking if we can %s the statefulset %s", action,
+			sts.Name)
+
+		if action == "stop" {
+			err := client.OkToStop(context, namespace, sts.Name,
+				daemonType, daemonName, cephVersion)
+			if err != nil {
+				return fmt.Errorf("failed to check if we can %s the "+
+					"deployment %s: %+v", action, sts.Name, err)
+			}
+		}
+
+		if action == "continue" {
+			err := client.OkToContinue(context, namespace, sts.Name,
+				daemonType, daemonName)
+			if err != nil {
+				return fmt.Errorf("failed to check if we can %s the "+
+					"deployment %s: %+v", action, sts.Name, err)
+			}
+		}
+
+		return nil
+	}
+
+	_, err := k8sutil.UpdateStatefulSetAndWait(context, sts, namespace, callback)
+	return err
+}
