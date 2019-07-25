@@ -618,32 +618,53 @@ func (c *Cluster) saveMonConfig() error {
 var updateDeploymentAndWait = UpdateCephDeploymentAndWait
 
 func (c *Cluster) startMon(m *monConfig, hostname string) error {
-
-	d := c.makeDeployment(m, hostname)
-	logger.Debugf("Starting mon: %+v", d.Name)
-	_, err := c.context.Clientset.AppsV1().Deployments(c.Namespace).Create(d)
+	service := c.makeService(m)
+	_, err := c.context.Clientset.CoreV1().Services(c.Namespace).Create(service)
 	if err != nil {
 		if !errors.IsAlreadyExists(err) {
-			return fmt.Errorf("failed to create mon deployment %s. %+v", m.ResourceName, err)
+			return fmt.Errorf("failed to create mon service. %+v", err)
 		}
-		logger.Infof("deployment for mon %s already exists. updating if needed", m.ResourceName)
-
-		// Always invoke ceph version before an upgrade so we are sure to be up-to-date
-		daemonType := string(config.MonType)
-		var cephVersionToUse cephver.CephVersion
-		currentCephVersion, err := client.LeastUptodateDaemonVersion(c.context, c.clusterInfo.Name, daemonType)
-		if err != nil {
-			logger.Warningf("failed to retrieve current ceph %s version. %+v", daemonType, err)
-			logger.Debug("could not detect ceph version during update, this is likely an initial bootstrap, proceeding with c.clusterInfo.CephVersion")
-			cephVersionToUse = c.clusterInfo.CephVersion
-		} else {
-			logger.Debugf("current cluster version for monitors before upgrading is: %+v", currentCephVersion)
-			cephVersionToUse = currentCephVersion
-		}
-		if err := updateDeploymentAndWait(c.context, d, c.Namespace, daemonType, m.DaemonName, cephVersionToUse); err != nil {
-			return fmt.Errorf("failed to update mon deployment %s. %+v", m.ResourceName, err)
-		}
+		logger.Infof("mon service already exists")
+	} else {
+		logger.Infof("created mon service")
 	}
+
+	mss := c.makeStatefulSet(m, hostname)
+	_, err = c.context.Clientset.AppsV1().StatefulSets(c.Namespace).Create(mss)
+	if err != nil {
+		if !errors.IsAlreadyExists(err) {
+			return fmt.Errorf("failed to create mon statefulset. %+v", err)
+		}
+		logger.Infof("mon statefulset already exists")
+	} else {
+		logger.Infof("created mon statefulset")
+	}
+
+	//d := c.makeDeployment(m, hostname)
+	//logger.Debugf("Starting mon: %+v", d.Name)
+	//_, err := c.context.Clientset.AppsV1().Deployments(c.Namespace).Create(d)
+	//if err != nil {
+	//	if !errors.IsAlreadyExists(err) {
+	//		return fmt.Errorf("failed to create mon deployment %s. %+v", m.ResourceName, err)
+	//	}
+	//	logger.Infof("deployment for mon %s already exists. updating if needed", m.ResourceName)
+
+	//	// Always invoke ceph version before an upgrade so we are sure to be up-to-date
+	//	daemonType := string(config.MonType)
+	//	var cephVersionToUse cephver.CephVersion
+	//	currentCephVersion, err := client.LeastUptodateDaemonVersion(c.context, c.clusterInfo.Name, daemonType)
+	//	if err != nil {
+	//		logger.Warningf("failed to retrieve current ceph %s version. %+v", daemonType, err)
+	//		logger.Debug("could not detect ceph version during update, this is likely an initial bootstrap, proceeding with c.clusterInfo.CephVersion")
+	//		cephVersionToUse = c.clusterInfo.CephVersion
+	//	} else {
+	//		logger.Debugf("current cluster version for monitors before upgrading is: %+v", currentCephVersion)
+	//		cephVersionToUse = currentCephVersion
+	//	}
+	//	if err := updateDeploymentAndWait(c.context, d, c.Namespace, daemonType, m.DaemonName, cephVersionToUse); err != nil {
+	//		return fmt.Errorf("failed to update mon deployment %s. %+v", m.ResourceName, err)
+	//	}
+	//}
 
 	return nil
 }

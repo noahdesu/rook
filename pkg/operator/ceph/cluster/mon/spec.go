@@ -51,6 +51,63 @@ func (c *Cluster) getLabels(daemonName string) map[string]string {
 	return labels
 }
 
+func (c *Cluster) makeService(monConfig *monConfig) *v1.Service {
+	// TODO: move to a helper function
+	name := fmt.Sprintf("%s-headless", monConfig.ResourceName)
+
+	return &v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: c.Namespace,
+			Labels:    c.getLabels(monConfig.DaemonName),
+		},
+		Spec: v1.ServiceSpec{
+			ClusterIP: "None",
+			Selector:  c.getLabels(monConfig.DaemonName),
+		},
+	}
+}
+
+func (c *Cluster) makeStatefulSet(monConfig *monConfig, hostname string) *apps.StatefulSet {
+	sts := &apps.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      monConfig.ResourceName,
+			Namespace: c.Namespace,
+			Labels:    c.getLabels(monConfig.DaemonName),
+		},
+	}
+
+	k8sutil.AddRookVersionLabelToStatefulSet(sts)
+	cephv1.GetMonAnnotations(c.spec.Annotations).ApplyToObjectMeta(&sts.ObjectMeta)
+	opspec.AddCephVersionLabelToStatefulSet(c.clusterInfo.CephVersion, sts)
+	k8sutil.SetOwnerRef(&sts.ObjectMeta, &c.ownerRef)
+
+	// TODO: move to a helper function
+	serviceName := fmt.Sprintf("%s-headless", monConfig.ResourceName)
+
+	replicaCount := int32(1)
+	pod := c.makeMonPod(monConfig, hostname)
+	sts.Spec = apps.StatefulSetSpec{
+		Replicas: &replicaCount,
+		Selector: &metav1.LabelSelector{
+			MatchLabels: c.getLabels(monConfig.DaemonName),
+		},
+		Template: v1.PodTemplateSpec{
+			ObjectMeta: pod.ObjectMeta,
+			Spec:       pod.Spec,
+		},
+		ServiceName: serviceName,
+		UpdateStrategy: apps.StatefulSetUpdateStrategy{
+			Type: apps.RollingUpdateStatefulSetStrategyType,
+		},
+	}
+
+	return sts
+}
+
+// TODO: this should be deleted since we won't actually be creating any new
+// deployments or updating any. we'll start the rook upgrade by doing a complete
+// conversion of deployments to statefulsets
 func (c *Cluster) makeDeployment(monConfig *monConfig, hostname string) *apps.Deployment {
 	d := &apps.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
