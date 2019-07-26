@@ -618,31 +618,88 @@ func (c *Cluster) saveMonConfig() error {
 var updateDeploymentAndWait = UpdateCephDeploymentAndWait
 
 func (c *Cluster) startMon(m *monConfig, hostname string) error {
-
 	d := c.makeDeployment(m, hostname)
-	logger.Debugf("Starting mon: %+v", d.Name)
-	_, err := c.context.Clientset.AppsV1().Deployments(c.Namespace).Create(d)
-	if err != nil {
-		if !errors.IsAlreadyExists(err) {
-			return fmt.Errorf("failed to create mon deployment %s. %+v", m.ResourceName, err)
-		}
-		logger.Infof("deployment for mon %s already exists. updating if needed", m.ResourceName)
 
-		// Always invoke ceph version before an upgrade so we are sure to be up-to-date
+	// check if the monitor deployment exists
+	var exists bool
+	_, err := c.context.Clientset.AppsV1().Deployments(c.Namespace).Get(
+		d.Name, metav1.GetOptions{})
+	if err == nil {
+		exists = true
+	} else {
+		if errors.IsNotFound(err) {
+			exists = false
+		} else {
+			return fmt.Errorf("failed to get mon deployment %s. %+v", d.Name, err)
+		}
+	}
+
+	if exists {
+		logger.Infof("deployment for mon %s already exists. updating if needed",
+			d.Name)
+
+		// perform a smart comparison. if the volumes are the same, except for
+		// the pvc then make sure the pvc doesn't change and let the others
+		// change.
+
+		// determine the ceph version to use. always query the ceph version
+		// directly before an upgrade so that we are sure to be up-to-date
 		daemonType := string(config.MonType)
 		var cephVersionToUse cephver.CephVersion
-		currentCephVersion, err := client.LeastUptodateDaemonVersion(c.context, c.clusterInfo.Name, daemonType)
+		currentCephVersion, err := client.LeastUptodateDaemonVersion(c.context,
+			c.clusterInfo.Name, daemonType)
 		if err != nil {
-			logger.Warningf("failed to retrieve current ceph %s version. %+v", daemonType, err)
-			logger.Debug("could not detect ceph version during update, this is likely an initial bootstrap, proceeding with c.clusterInfo.CephVersion")
+			logger.Warningf("failed to retrieve current ceph %s version. %+v",
+				daemonType, err)
+			logger.Debug("could not detect ceph version during update, this " +
+				"is likely an initial bootstrap, proceeding with " +
+				"c.clusterInfo.CephVersion")
 			cephVersionToUse = c.clusterInfo.CephVersion
 		} else {
-			logger.Debugf("current cluster version for monitors before upgrading is: %+v", currentCephVersion)
+			logger.Debugf("current cluster version for monitors before "+
+				"upgrading is: %+v", currentCephVersion)
 			cephVersionToUse = currentCephVersion
+
+			// remove me later
+			logger.Info(cephVersionToUse)
 		}
-		if err := updateDeploymentAndWait(c.context, d, c.Namespace, daemonType, m.DaemonName, cephVersionToUse); err != nil {
-			return fmt.Errorf("failed to update mon deployment %s. %+v", m.ResourceName, err)
+
+		// enable updates again when we figure out how to test for pvc changes
+		//err = updateDeploymentAndWait(c.context, d, c.Namespace, daemonType,
+		//	m.DaemonName, cephVersionToUse)
+		//if err != nil {
+		//	return fmt.Errorf("failed to update mon deployment %s. %+v",
+		//		m.ResourceName, err)
+		//}
+
+		return nil
+	}
+
+	logger.Debugf("Starting mon: %+v", d.Name)
+
+	// NEXT STEP: we have pvcs getting mounted now... so now try to use the pvc
+	// for all the storage
+	//          /var/lib/ceph/mon/ceph-c from ceph-daemon-data (rw)
+	//        Type:          HostPath (bare host directory volume)
+	//          /var/log/ceph from rook-ceph-log (rw)
+	//        Type:          HostPath (bare host directory volume)
+
+	// build a pvc for the new monitor deployment. when the cluster crd has
+	// specified a volume claim template, the deployment will have a matching
+	// claim and volume mounts.
+	if c.spec.Mon.VolumeClaimTemplate != nil {
+		pvc := c.makeDeploymentPVC(m)
+		_, err = c.context.Clientset.CoreV1().PersistentVolumeClaims(
+			c.Namespace).Create(pvc)
+		if err != nil {
+			return fmt.Errorf("failed to create mon %s pvc %s. %+v",
+				d.Name, pvc.Name, err)
 		}
+	}
+
+	_, err = c.context.Clientset.AppsV1().Deployments(c.Namespace).Create(d)
+	if err != nil {
+		return fmt.Errorf("failed to create mon deployment %s. %+v", d.Name, err)
 	}
 
 	return nil
