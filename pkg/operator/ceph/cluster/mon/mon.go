@@ -638,12 +638,34 @@ func (c *Cluster) startMon(m *monConfig, hostname string) error {
 		logger.Infof("deployment for mon %s already exists. updating if needed",
 			d.Name)
 
-		// perform a smart comparison. if the volumes are the same, except for
-		// the pvc then make sure the pvc doesn't change and let the others
-		// change.
+		// monitor deployment update does not consider changes made to the claim
+		// template specified in the crd. changes to monitor storage in the crd
+		// are applied when mons are created (initially or part of a fail over
+		// process). to enforce this rule we need to be careful when changing
+		// the monitor spec to retain the current pvc or non-pvc storage
+		// settings, while letting other updates pass through to be applied.
 
-		// determine the ceph version to use. always query the ceph version
-		// directly before an upgrade so that we are sure to be up-to-date
+		// query for pvc storage backing this monitor deployment
+		pvc := c.makeDeploymentPVC(m)
+		_, err := c.context.Clientset.CoreV1().PersistentVolumeClaims(
+			c.Namespace).Get(pvc.Name, metav1.GetOptions{})
+		if err == nil {
+			// if the pvc exists, then the deployment was originally created
+			// with associated volume mounts. add those now. this leaves the pvc
+			// unchanged (e.g. if the crd claim template changed), as well as
+			// the original volume mounts. an alternative approach would be to
+			// examine the delta between the updated deployment and the existing
+			// deployment and ensure that pvcs remain, while other updates are
+			// let through.
+			c.addPVCVolumes(d)
+		} else {
+			// add the non pvc host path volumes
+		}
+
+		// test for errors getting the pvc
+		// i think we can leave the volumemounts on the containers the same and
+		// just change the volume sources on the podspec
+
 		daemonType := string(config.MonType)
 		var cephVersionToUse cephver.CephVersion
 		currentCephVersion, err := client.LeastUptodateDaemonVersion(c.context,
@@ -665,28 +687,16 @@ func (c *Cluster) startMon(m *monConfig, hostname string) error {
 		}
 
 		// enable updates again when we figure out how to test for pvc changes
-		//err = updateDeploymentAndWait(c.context, d, c.Namespace, daemonType,
-		//	m.DaemonName, cephVersionToUse)
-		//if err != nil {
-		//	return fmt.Errorf("failed to update mon deployment %s. %+v",
-		//		m.ResourceName, err)
-		//}
+		err = updateDeploymentAndWait(c.context, d, c.Namespace, daemonType,
+			m.DaemonName, cephVersionToUse)
+		if err != nil {
+			return fmt.Errorf("failed to update mon deployment %s. %+v",
+				m.ResourceName, err)
+		}
 
 		return nil
 	}
 
-	logger.Debugf("Starting mon: %+v", d.Name)
-
-	// NEXT STEP: we have pvcs getting mounted now... so now try to use the pvc
-	// for all the storage
-	//          /var/lib/ceph/mon/ceph-c from ceph-daemon-data (rw)
-	//        Type:          HostPath (bare host directory volume)
-	//          /var/log/ceph from rook-ceph-log (rw)
-	//        Type:          HostPath (bare host directory volume)
-
-	// build a pvc for the new monitor deployment. when the cluster crd has
-	// specified a volume claim template, the deployment will have a matching
-	// claim and volume mounts.
 	if c.spec.Mon.VolumeClaimTemplate != nil {
 		pvc := c.makeDeploymentPVC(m)
 		_, err = c.context.Clientset.CoreV1().PersistentVolumeClaims(
@@ -695,8 +705,12 @@ func (c *Cluster) startMon(m *monConfig, hostname string) error {
 			return fmt.Errorf("failed to create mon %s pvc %s. %+v",
 				d.Name, pvc.Name, err)
 		}
+		c.addPVCVolumes(d)
+	} else {
+		// add the non pvc host path volumes
 	}
 
+	logger.Debugf("Starting mon: %+v", d.Name)
 	_, err = c.context.Clientset.AppsV1().Deployments(c.Namespace).Create(d)
 	if err != nil {
 		return fmt.Errorf("failed to create mon deployment %s. %+v", d.Name, err)

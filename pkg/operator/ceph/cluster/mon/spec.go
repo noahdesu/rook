@@ -85,8 +85,10 @@ func (c *Cluster) makeDeployment(monConfig *monConfig, hostname string) *apps.De
 }
 
 // need resource owner?
+// other labels and annotations?
 func (c *Cluster) makeDeploymentPVC(m *monConfig) *v1.PersistentVolumeClaim {
 	volumeMode := v1.PersistentVolumeFilesystem
+	// TODO class name comes from crd
 	storageClassName := "fast-disks"
 	return &v1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
@@ -98,6 +100,7 @@ func (c *Cluster) makeDeploymentPVC(m *monConfig) *v1.PersistentVolumeClaim {
 			AccessModes: []v1.PersistentVolumeAccessMode{
 				v1.ReadWriteOnce,
 			},
+			// TODO resource requests come from crd
 			Resources: v1.ResourceRequirements{
 				Requests: v1.ResourceList{
 					v1.ResourceStorage: resource.MustParse("100m"),
@@ -112,6 +115,24 @@ func (c *Cluster) makeDeploymentPVC(m *monConfig) *v1.PersistentVolumeClaim {
 /*
  * Pod spec
  */
+
+func (c *Cluster) addPVCVolumes(d *apps.Deployment) {
+	podSpec := &d.Spec.Template.Spec
+	podSpec.Volumes = append(podSpec.Volumes, v1.Volume{
+		Name: d.Name + "-pv-storage",
+		VolumeSource: v1.VolumeSource{
+			PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
+				ClaimName: d.Name + "-pv-claim",
+			},
+		},
+	})
+
+	podSpec.Containers[0].VolumeMounts = append(podSpec.Containers[0].VolumeMounts,
+		v1.VolumeMount{
+			Name:      d.Name + "-pv-storage",
+			MountPath: "/foobar",
+		})
+}
 
 func (c *Cluster) makeMonPod(monConfig *monConfig, hostname string) *v1.Pod {
 	logger.Debug("monConfig: %+v", monConfig)
@@ -130,23 +151,6 @@ func (c *Cluster) makeMonPod(monConfig *monConfig, hostname string) *v1.Pod {
 	}
 	if c.HostNetwork {
 		podSpec.DNSPolicy = v1.DNSClusterFirstWithHostNet
-	}
-
-	if c.spec.Mon.VolumeClaimTemplate != nil {
-		podSpec.Volumes = append(podSpec.Volumes, v1.Volume{
-			Name: monConfig.ResourceName + "-pv-storage",
-			VolumeSource: v1.VolumeSource{
-				PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
-					ClaimName: monConfig.ResourceName + "-pv-claim",
-				},
-			},
-		})
-
-		podSpec.Containers[0].VolumeMounts = append(podSpec.Containers[0].VolumeMounts,
-			v1.VolumeMount{
-				Name:      monConfig.ResourceName + "-pv-storage",
-				MountPath: "/foobar",
-			})
 	}
 
 	// apply the pod placement if specified in the crd
