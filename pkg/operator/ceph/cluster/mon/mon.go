@@ -618,9 +618,10 @@ func (c *Cluster) saveMonConfig() error {
 var updateDeploymentAndWait = UpdateCephDeploymentAndWait
 
 func (c *Cluster) startMon(m *monConfig, hostname string) error {
-	d := c.makeDeployment(m, hostname)
 
 	// check if the monitor deployment exists
+	d := c.makeDeployment(m, hostname)
+
 	var exists bool
 	_, err := c.context.Clientset.AppsV1().Deployments(c.Namespace).Get(
 		d.Name, metav1.GetOptions{})
@@ -634,37 +635,37 @@ func (c *Cluster) startMon(m *monConfig, hostname string) error {
 		}
 	}
 
+	// the mon deployment exists, and may need an update. monitor deployment
+	// update does not consider changes made to the claim template specified in
+	// the crd. changes to monitor storage in the crd are applied when mons are
+	// created (initially or part of a fail over process). to enforce this rule
+	// we need to be careful when changing the monitor spec to retain the
+	// current pvc or non-pvc storage settings, while letting other updates pass
+	// through to be applied.
+	//
+	// to do this, the deployment object does not initially contain the volume
+	// sources for mounts that may be backed by pvc or hostpath storage,
+	// depending on the configuration. at runtime (below) we dynamically add
+	// the correct volume sources by inspecting the current state of the
+	// deployment. the pvc/hostpath decision is made based on the current state
+	// of the crd at the time the deployment is created.
 	if exists {
 		logger.Infof("deployment for mon %s already exists. updating if needed",
 			d.Name)
 
-		// monitor deployment update does not consider changes made to the claim
-		// template specified in the crd. changes to monitor storage in the crd
-		// are applied when mons are created (initially or part of a fail over
-		// process). to enforce this rule we need to be careful when changing
-		// the monitor spec to retain the current pvc or non-pvc storage
-		// settings, while letting other updates pass through to be applied.
+		// FIXME: add this to a helper function
+		pvcName := m.ResourceName + "-pv-claim"
 
-		// query for pvc storage backing this monitor deployment
-		pvc := c.makeDeploymentPVC(m)
 		_, err := c.context.Clientset.CoreV1().PersistentVolumeClaims(
-			c.Namespace).Get(pvc.Name, metav1.GetOptions{})
+			c.Namespace).Get(pvcName, metav1.GetOptions{})
 		if err == nil {
-			// if the pvc exists, then the deployment was originally created
-			// with associated volume mounts. add those now. this leaves the pvc
-			// unchanged (e.g. if the crd claim template changed), as well as
-			// the original volume mounts. an alternative approach would be to
-			// examine the delta between the updated deployment and the existing
-			// deployment and ensure that pvcs remain, while other updates are
-			// let through.
-			c.addPVCVolumes(d)
+			c.addPodVolumePVC(d)
+		} else if errors.IsNotFound(err) {
+			// the hostpath volume is already present. when adding pvc volumes the
+			// hostpath volume is removed and replaced.
 		} else {
-			// add the non pvc host path volumes
+			return fmt.Errorf("failed to get pvc %s. %+v", pvcName, err)
 		}
-
-		// test for errors getting the pvc
-		// i think we can leave the volumemounts on the containers the same and
-		// just change the volume sources on the podspec
 
 		daemonType := string(config.MonType)
 		var cephVersionToUse cephver.CephVersion
@@ -681,9 +682,6 @@ func (c *Cluster) startMon(m *monConfig, hostname string) error {
 			logger.Debugf("current cluster version for monitors before "+
 				"upgrading is: %+v", currentCephVersion)
 			cephVersionToUse = currentCephVersion
-
-			// remove me later
-			logger.Info(cephVersionToUse)
 		}
 
 		// enable updates again when we figure out how to test for pvc changes
@@ -705,9 +703,10 @@ func (c *Cluster) startMon(m *monConfig, hostname string) error {
 			return fmt.Errorf("failed to create mon %s pvc %s. %+v",
 				d.Name, pvc.Name, err)
 		}
-		c.addPVCVolumes(d)
+		c.addPodVolumePVC(d)
 	} else {
-		// add the non pvc host path volumes
+		// the hostpath volume is already present. when adding pvc volumes the
+		// hostpath volume is removed and replaced.
 	}
 
 	logger.Debugf("Starting mon: %+v", d.Name)

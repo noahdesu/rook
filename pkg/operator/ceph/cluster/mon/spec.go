@@ -87,9 +87,8 @@ func (c *Cluster) makeDeployment(monConfig *monConfig, hostname string) *apps.De
 // need resource owner?
 // other labels and annotations?
 func (c *Cluster) makeDeploymentPVC(m *monConfig) *v1.PersistentVolumeClaim {
+	tmpl := c.spec.Mon.VolumeClaimTemplate
 	volumeMode := v1.PersistentVolumeFilesystem
-	// TODO class name comes from crd
-	storageClassName := "fast-disks"
 	return &v1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      m.ResourceName + "-pv-claim",
@@ -101,12 +100,13 @@ func (c *Cluster) makeDeploymentPVC(m *monConfig) *v1.PersistentVolumeClaim {
 				v1.ReadWriteOnce,
 			},
 			// TODO resource requests come from crd
+			// TODO also implement defaults
 			Resources: v1.ResourceRequirements{
 				Requests: v1.ResourceList{
 					v1.ResourceStorage: resource.MustParse("100m"),
 				},
 			},
-			StorageClassName: &storageClassName,
+			StorageClassName: tmpl.Spec.StorageClassName,
 			VolumeMode:       &volumeMode,
 		},
 	}
@@ -116,22 +116,27 @@ func (c *Cluster) makeDeploymentPVC(m *monConfig) *v1.PersistentVolumeClaim {
  * Pod spec
  */
 
-func (c *Cluster) addPVCVolumes(d *apps.Deployment) {
+func (c *Cluster) addPodVolumePVC(d *apps.Deployment) {
 	podSpec := &d.Spec.Template.Spec
+
+	// remove the hostpath-based volume, and replace it below with the pvc-based
+	// volume. TODO: this should be integrated into ceph/spec/spec.go along with
+	// all the other volume management
+	for i, v := range podSpec.Volumes {
+		if v.Name == "ceph-daemon-data" {
+			podSpec.Volumes = append(podSpec.Volumes[:i], podSpec.Volumes[i+1:]...)
+			break
+		}
+	}
+
 	podSpec.Volumes = append(podSpec.Volumes, v1.Volume{
-		Name: d.Name + "-pv-storage",
+		Name: "ceph-daemon-data",
 		VolumeSource: v1.VolumeSource{
 			PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
 				ClaimName: d.Name + "-pv-claim",
 			},
 		},
 	})
-
-	podSpec.Containers[0].VolumeMounts = append(podSpec.Containers[0].VolumeMounts,
-		v1.VolumeMount{
-			Name:      d.Name + "-pv-storage",
-			MountPath: "/foobar",
-		})
 }
 
 func (c *Cluster) makeMonPod(monConfig *monConfig, hostname string) *v1.Pod {
