@@ -84,14 +84,24 @@ func (c *Cluster) makeDeployment(monConfig *monConfig, hostname string) *apps.De
 	return d
 }
 
-// need resource owner?
-// other labels and annotations?
-func (c *Cluster) makeDeploymentPVC(m *monConfig) *v1.PersistentVolumeClaim {
-	tmpl := c.spec.Mon.VolumeClaimTemplate
+func monDataPVCName(m *monConfig) string {
+	return m.ResourceName + "-pv-claim"
+}
+
+func (c *Cluster) makeDeploymentPVC(m *monConfig) (*v1.PersistentVolumeClaim, error) {
+	template := c.spec.Mon.VolumeClaimTemplate
+
+	resources := v1.ResourceRequirements{}
+	var storageClassName *string
+	if template != nil {
+		storageClassName = template.Spec.StorageClassName
+		resources = template.Spec.Resources
+	}
+
 	volumeMode := v1.PersistentVolumeFilesystem
-	return &v1.PersistentVolumeClaim{
+	pvc := &v1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      m.ResourceName + "-pv-claim",
+			Name:      monDataPVCName(m),
 			Namespace: c.Namespace,
 			Labels:    c.getLabels(m.DaemonName),
 		},
@@ -99,45 +109,42 @@ func (c *Cluster) makeDeploymentPVC(m *monConfig) *v1.PersistentVolumeClaim {
 			AccessModes: []v1.PersistentVolumeAccessMode{
 				v1.ReadWriteOnce,
 			},
-			// TODO resource requests come from crd
-			// TODO also implement defaults
-			Resources: v1.ResourceRequirements{
-				Requests: v1.ResourceList{
-					v1.ResourceStorage: resource.MustParse("100m"),
-				},
-			},
-			StorageClassName: tmpl.Spec.StorageClassName,
+			Resources:        resources,
+			StorageClassName: storageClassName,
 			VolumeMode:       &volumeMode,
 		},
 	}
+	k8sutil.AddRookVersionLabelToObjectMeta(&pvc.ObjectMeta)
+	cephv1.GetMonAnnotations(c.spec.Annotations).ApplyToObjectMeta(&pvc.ObjectMeta)
+	opspec.AddCephVersionLabelToObjectMeta(c.clusterInfo.CephVersion, &pvc.ObjectMeta)
+	k8sutil.SetOwnerRef(&pvc.ObjectMeta, &c.ownerRef)
+
+	// k8s uses limit as the resource request fallback
+	if _, ok := pvc.Spec.Resources.Limits[v1.ResourceStorage]; ok {
+		return pvc, nil
+	}
+
+	// specific request in the crd
+	if _, ok := pvc.Spec.Resources.Requests[v1.ResourceStorage]; ok {
+		return pvc, nil
+	}
+
+	req, err := resource.ParseQuantity(cephMonDefaultStorageRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	if pvc.Spec.Resources.Requests == nil {
+		pvc.Spec.Resources.Requests = v1.ResourceList{}
+	}
+	pvc.Spec.Resources.Requests[v1.ResourceStorage] = req
+
+	return pvc, nil
 }
 
 /*
  * Pod spec
  */
-
-func (c *Cluster) addPodVolumePVC(d *apps.Deployment) {
-	podSpec := &d.Spec.Template.Spec
-
-	// remove the hostpath-based volume, and replace it below with the pvc-based
-	// volume. TODO: this should be integrated into ceph/spec/spec.go along with
-	// all the other volume management
-	for i, v := range podSpec.Volumes {
-		if v.Name == "ceph-daemon-data" {
-			podSpec.Volumes = append(podSpec.Volumes[:i], podSpec.Volumes[i+1:]...)
-			break
-		}
-	}
-
-	podSpec.Volumes = append(podSpec.Volumes, v1.Volume{
-		Name: "ceph-daemon-data",
-		VolumeSource: v1.VolumeSource{
-			PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
-				ClaimName: d.Name + "-pv-claim",
-			},
-		},
-	})
-}
 
 func (c *Cluster) makeMonPod(monConfig *monConfig, hostname string) *v1.Pod {
 	logger.Debug("monConfig: %+v", monConfig)
@@ -151,7 +158,7 @@ func (c *Cluster) makeMonPod(monConfig *monConfig, hostname string) *v1.Pod {
 		},
 		RestartPolicy: v1.RestartPolicyAlways,
 		NodeSelector:  map[string]string{v1.LabelHostname: hostname},
-		Volumes:       opspec.DaemonVolumes(monConfig.DataPathMap, keyringStoreName),
+		Volumes:       opspec.DaemonVolumesBase(monConfig.DataPathMap, keyringStoreName),
 		HostNetwork:   c.HostNetwork,
 	}
 	if c.HostNetwork {

@@ -71,9 +71,7 @@ func RookVolumeMounts() []v1.VolumeMount {
 	)
 }
 
-// DaemonVolumes returns the pod volumes used by all Ceph daemons. If keyring resource name is
-// empty, there will be no keyring volume created from a secret.
-func DaemonVolumes(dataPaths *config.DataPathMap, keyringResourceName string) []v1.Volume {
+func DaemonVolumesBase(dataPaths *config.DataPathMap, keyringResourceName string) []v1.Volume {
 	vols := []v1.Volume{
 		config.StoredFileVolume(),
 	}
@@ -84,6 +82,22 @@ func DaemonVolumes(dataPaths *config.DataPathMap, keyringResourceName string) []
 		// logs are not persisted to host
 		vols = append(vols, StoredLogVolume(dataPaths.HostLogDir))
 	}
+	return vols
+}
+
+func DaemonVolumesDataPVC(pvcName string) v1.Volume {
+	return v1.Volume{
+		Name: "ceph-daemon-data",
+		VolumeSource: v1.VolumeSource{
+			PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
+				ClaimName: pvcName,
+			},
+		},
+	}
+}
+
+func DaemonVolumesDataHostPath(dataPaths *config.DataPathMap) []v1.Volume {
+	vols := []v1.Volume{}
 	if dataPaths.ContainerDataDir == "" {
 		// no data is stored in container, and therefore no data can be persisted to host
 		return vols
@@ -95,6 +109,14 @@ func DaemonVolumes(dataPaths *config.DataPathMap, keyringResourceName string) []
 		src = v1.VolumeSource{HostPath: &v1.HostPathVolumeSource{Path: dataPaths.HostDataDir}}
 	}
 	return append(vols, v1.Volume{Name: "ceph-daemon-data", VolumeSource: src})
+}
+
+// DaemonVolumes returns the pod volumes used by all Ceph daemons. If keyring resource name is
+// empty, there will be no keyring volume created from a secret.
+func DaemonVolumes(dataPaths *config.DataPathMap, keyringResourceName string) []v1.Volume {
+	vols := DaemonVolumesBase(dataPaths, keyringResourceName)
+	vols = append(vols, DaemonVolumesDataHostPath(dataPaths)...)
+	return vols
 }
 
 // DaemonVolumeMounts returns volume mounts which correspond to the DaemonVolumes. These

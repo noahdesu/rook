@@ -79,6 +79,9 @@ const (
 
 	// minimum amount of memory in MB to run the pod
 	cephMonPodMinimumMemory uint64 = 1024
+
+	// default storage request size for ceph monitor pvc
+	cephMonDefaultStorageRequest = "10Gi"
 )
 
 var (
@@ -618,54 +621,58 @@ func (c *Cluster) saveMonConfig() error {
 var updateDeploymentAndWait = UpdateCephDeploymentAndWait
 
 func (c *Cluster) startMon(m *monConfig, hostname string) error {
-
-	// check if the monitor deployment exists
+	// check if the monitor deployment already exists
 	d := c.makeDeployment(m, hostname)
-
-	var exists bool
+	var deploymentExists bool
 	_, err := c.context.Clientset.AppsV1().Deployments(c.Namespace).Get(
 		d.Name, metav1.GetOptions{})
 	if err == nil {
-		exists = true
+		deploymentExists = true
 	} else {
 		if errors.IsNotFound(err) {
-			exists = false
+			deploymentExists = false
 		} else {
 			return fmt.Errorf("failed to get mon deployment %s. %+v", d.Name, err)
 		}
 	}
 
-	// the mon deployment exists, and may need an update. monitor deployment
-	// update does not consider changes made to the claim template specified in
-	// the crd. changes to monitor storage in the crd are applied when mons are
-	// created (initially or part of a fail over process). to enforce this rule
-	// we need to be careful when changing the monitor spec to retain the
-	// current pvc or non-pvc storage settings, while letting other updates pass
-	// through to be applied.
-	//
-	// to do this, the deployment object does not initially contain the volume
-	// sources for mounts that may be backed by pvc or hostpath storage,
-	// depending on the configuration. at runtime (below) we dynamically add
-	// the correct volume sources by inspecting the current state of the
-	// deployment. the pvc/hostpath decision is made based on the current state
-	// of the crd at the time the deployment is created.
-	if exists {
+	// if the deployment exists, also check if it is using PVC storage
+	pvc, err := c.makeDeploymentPVC(m)
+	if err != nil {
+		return fmt.Errorf("failed to make mon %s pvc. %+v", d.Name, err)
+	}
+	var pvcExists bool
+	if deploymentExists {
+		_, err = c.context.Clientset.CoreV1().PersistentVolumeClaims(
+			c.Namespace).Get(pvc.Name, metav1.GetOptions{})
+		if err == nil {
+			pvcExists = true
+		} else if errors.IsNotFound(err) {
+			pvcExists = false
+		} else {
+			return fmt.Errorf("failed to get pvc %s. %+v", pvc.Name, err)
+		}
+	} else {
+		pvcExists = false
+	}
+
+	// persistent storage is not altered after the deployment is created. this
+	// means we need to be careful when updating the deployment to avoid new
+	// changes to the crd to change an existing pod's persistent storage. the
+	// deployment spec created above does not specify persistent storage. here
+	// we add in PVC or HostPath storage based on an existing deployment OR on
+	// the current state of the CRD.
+	if pvcExists || (!deploymentExists && c.spec.Mon.VolumeClaimTemplate != nil) {
+		d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes,
+			opspec.DaemonVolumesDataPVC(pvc.Name))
+	} else {
+		d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes,
+			opspec.DaemonVolumesDataHostPath(m.DataPathMap)...)
+	}
+
+	if deploymentExists {
 		logger.Infof("deployment for mon %s already exists. updating if needed",
 			d.Name)
-
-		// FIXME: add this to a helper function
-		pvcName := m.ResourceName + "-pv-claim"
-
-		_, err := c.context.Clientset.CoreV1().PersistentVolumeClaims(
-			c.Namespace).Get(pvcName, metav1.GetOptions{})
-		if err == nil {
-			c.addPodVolumePVC(d)
-		} else if errors.IsNotFound(err) {
-			// the hostpath volume is already present. when adding pvc volumes the
-			// hostpath volume is removed and replaced.
-		} else {
-			return fmt.Errorf("failed to get pvc %s. %+v", pvcName, err)
-		}
 
 		daemonType := string(config.MonType)
 		var cephVersionToUse cephver.CephVersion
@@ -696,17 +703,12 @@ func (c *Cluster) startMon(m *monConfig, hostname string) error {
 	}
 
 	if c.spec.Mon.VolumeClaimTemplate != nil {
-		pvc := c.makeDeploymentPVC(m)
 		_, err = c.context.Clientset.CoreV1().PersistentVolumeClaims(
 			c.Namespace).Create(pvc)
 		if err != nil {
 			return fmt.Errorf("failed to create mon %s pvc %s. %+v",
 				d.Name, pvc.Name, err)
 		}
-		c.addPodVolumePVC(d)
-	} else {
-		// the hostpath volume is already present. when adding pvc volumes the
-		// hostpath volume is removed and replaced.
 	}
 
 	logger.Debugf("Starting mon: %+v", d.Name)
