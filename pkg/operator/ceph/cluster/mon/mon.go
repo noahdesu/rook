@@ -198,14 +198,10 @@ func (c *Cluster) Start(clusterInfo *cephconfig.ClusterInfo, rookVersion string,
 		return nil, fmt.Errorf("failed to initialize ceph cluster info. %+v", err)
 	}
 
-	targetCount, msg, err := c.getTargetMonCount()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get target mon count. %+v", err)
-	}
-	logger.Infof(msg)
+	logger.Infof("targeting the mon count %d", c.spec.Mon.Count)
 
 	// create the mons for a new cluster or ensure mons are running in an existing cluster
-	return c.clusterInfo, c.startMons(targetCount)
+	return c.clusterInfo, c.startMons(c.spec.Mon.Count)
 }
 
 func (c *Cluster) startMons(targetCount int) error {
